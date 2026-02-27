@@ -1,123 +1,279 @@
-# Clase 01 – Fundamentos de Python hasta POO con Tipado
+# Clase 02 – FastAPI: Primer Servicio Web (Hello World)
 
-Esta clase consolida los fundamentos de Python desde los tipos de datos básicos hasta Programación Orientada a Objetos (POO) aplicando tipado estático para documentación.
+En esta clase iniciamos el desarrollo de servicios web usando **FastAPI**.
 
-El objetivo no es solo “que funcione”, sino entender estructura, buenas prácticas y organización del código.
-
----
-
-## 📂 Estructura de Scripts
-
-### script_01_tipos_operadores_estructuras.py
-Contiene:
-- Tipos de datos básicos (int, float, str, bool, None)
-- Conversión de tipos
-- Operadores aritméticos, lógicos y de comparación
-- Estructuras de datos:
-  - list
-  - tuple
-  - dict
-  - set
-
-Objetivo:
-Entender cómo Python representa y manipula datos.
+El objetivo es comprender qué es un framework web moderno, por qué se utiliza en este curso y cómo crear nuestro primer servicio HTTP funcional.
 
 ---
 
-### script_02_strings_input_formato.py
-Contiene:
-- Manejo de strings
-- Métodos principales de texto
-- Slicing
-- input()
-- Conversión de datos ingresados
-- Formateo con f-strings
+## ¿Qué es FastAPI?
 
-Objetivo:
-Trabajar correctamente con texto y entrada de usuario.
+FastAPI es un framework moderno para construir APIs con Python.
 
----
+Se caracteriza por:
 
-### script_03_listas_tuplas_diccionarios_sets.py
-Contiene:
-- Profundización en listas
-- Recorridos (for, enumerate)
-- Métodos importantes
-- Ordenamiento
-- Slicing
-- Copias correctas
-- Listas anidadas
-- Repaso práctico de dict y set
+- Alto rendimiento (basado en Starlette y Pydantic)
+- Uso de tipado (type hints) nativo de Python
+- Validación automática de datos
+- Documentación automática (Swagger y ReDoc)
+- Diseño limpio y fácil de escalar
 
-Objetivo:
-Dominar estructuras de datos antes de entrar a lógica más compleja.
+Es ampliamente utilizado en:
+
+- Backend de aplicaciones web
+- Microservicios
+- APIs para Machine Learning
+- Sistemas distribuidos
 
 ---
 
-### script_04_condicionales_ciclos_control_flujo.py
-Contiene:
-- if / elif / else
-- for
-- while
-- break / continue / pass
-- Mini problemas prácticos
+## ¿Por qué FastAPI en este curso?
 
-Objetivo:
-Controlar el flujo del programa.
+Este curso no busca solo “hacer backend”, sino aprender arquitectura limpia y buenas prácticas desde el inicio.
 
----
+FastAPI es ideal porque:
 
-### script_05_funciones.py
-Contiene:
-- Definición de funciones
-- Parámetros y retorno
-- Diferencia entre print y return
-- Valores por defecto
-- Scope básico
-- *args y **kwargs
+- Obliga a usar tipado (documentación clara)
+- Genera documentación automática
+- Es simple para empezar
+- Escala bien para proyectos reales
+- Se integra fácilmente con bases de datos y microservicios
 
-Objetivo:
-Modularizar el código y evitar repetición.
+Además, en cursos posteriores lo usaremos junto con:
+- Pydantic
+- Docker
+- Bases de datos
+- Arquitectura modular
 
 ---
 
-### script_06_poo_tipado.py
-Contiene:
-- Clases y objetos
-- __init__
-- Atributos y métodos
-- Tipado con:
-  - nombre: str
-  - edad: int
-  - -> float
-- Encapsulamiento básico con @property
-- Herencia
-- Métodos de clase y estáticos
-- Composición
+## Recursos Oficiales
 
-Objetivo:
-Modelar entidades reales usando POO y documentar correctamente el código mediante type hints.
+Documentación oficial:
+
+https://fastapi.tiangolo.com/
+
+Video recomendado (introducción práctica):
+
+https://www.youtube.com/watch?v=mpR8ngthqiE
 
 ---
 
-## 🎯 Resultado Esperado
+## Objetivo de la Clase
 
-Al finalizar estos scripts el estudiante debe ser capaz de:
+Al finalizar esta clase el estudiante debe poder:
 
-- Comprender cómo Python maneja datos y estructuras.
-- Escribir programas con lógica controlada.
-- Modularizar código usando funciones.
-- Crear clases bien estructuradas.
-- Aplicar tipado para documentar entradas y salidas.
-- Modelar objetos simples del mundo real.
+- Instalar FastAPI
+- Crear un proyecto básico
+- Levantar un servidor local
+- Crear un endpoint tipo "Hello World"
+- Acceder a la documentación automática
+- Entender el flujo básico HTTP
+
+
+
+# 1️⃣ Entorno Virtual (venv)
+
+Trabajar con entorno virtual es obligatorio en proyectos profesionales.  
+Permite aislar dependencias por proyecto.
 
 ---
 
-## 📌 Requisitos
+## 🔹 Crear entorno virtual
 
-- Python 3.10+
-- Editor recomendado: VS Code
-- Ejecutar cada script de forma independiente:
+Desde la carpeta del proyecto:
 
 ```bash
-python script_01_tipos_operadores_estructuras.py
+python -m venv venv
+```
+
+Esto crea una carpeta llamada `venv` con el entorno aislado.
+
+---
+
+## 🔹 Activar entorno virtual
+
+### En Git Bash (recomendado en Windows)
+
+```bash
+source venv/Scripts/activate
+```
+
+### En CMD (Windows)
+
+```bash
+venv\Scripts\activate
+```
+
+### En Linux / Mac
+
+```bash
+source venv/bin/activate
+```
+
+Cuando el entorno está activo, verás algo como:
+
+```
+(venv)
+```
+
+al inicio de la línea de comandos.
+
+---
+
+## 🔹 Desactivar entorno virtual
+
+```bash
+deactivate
+```
+
+---
+
+## 🔹 ¿Por qué usar Git Bash?
+
+Se recomienda usar **Git Bash** en Windows porque:
+
+- Usa comandos estilo Linux
+- Evita inconsistencias entre CMD y PowerShell
+- Es el entorno más común en proyectos reales
+- Facilita trabajo futuro con Docker y servidores Linux
+
+---
+
+# 2️⃣ Instalación de FastAPI
+
+Con el entorno virtual activado:
+
+```bash
+pip install fastapi uvicorn
+```
+
+- `fastapi` → framework web
+- `uvicorn` → servidor ASGI para ejecutar la aplicación
+
+---
+
+# 3️⃣ Primer Servicio – main.py
+
+Crear archivo `main.py`:
+
+```python
+from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.get("/")
+def root() -> dict:
+    return {"message": "Hello World"}
+```
+
+---
+
+## 🔍 Explicación del Código
+
+### `from fastapi import FastAPI`
+
+Importa la clase principal del framework.
+
+---
+
+### `app = FastAPI()`
+
+Crea la aplicación web.
+
+Esta instancia es el núcleo del servicio.
+
+---
+
+### `@app.get("/")`
+
+Decorador que indica:
+
+- Método HTTP: GET
+- Ruta: `/`
+- Cuando alguien visite esa ruta, se ejecuta la función debajo.
+
+---
+
+### `def root() -> dict:`
+
+Función que maneja la petición.
+
+- `root` → nombre de la función (puede ser cualquier nombre).
+- `-> dict` → tipado del retorno (documentación).
+- Devuelve un diccionario.
+- FastAPI lo convierte automáticamente a JSON.
+
+---
+
+### `return {"message": "Hello World"}`
+
+Respuesta en formato JSON:
+
+```json
+{
+  "message": "Hello World"
+}
+```
+
+---
+
+# 4️⃣ Levantar el Servidor
+
+Desde la consola (con entorno virtual activo):
+
+```bash
+uvicorn main:app --reload
+```
+
+---
+
+## 🔍 Explicación del comando
+
+- `main` → nombre del archivo (main.py)
+- `app` → instancia de FastAPI
+- `--reload` → reinicia automáticamente al guardar cambios
+
+---
+
+# 5️⃣ Probar el Servicio
+
+Abrir navegador:
+
+```
+http://127.0.0.1:8000/
+```
+
+Documentación automática:
+
+```
+http://127.0.0.1:8000/docs
+```
+
+Documentación alternativa:
+
+```
+http://127.0.0.1:8000/redoc
+```
+
+---
+
+# 🎯 Resultado de la Clase
+
+Al finalizar esta práctica debes:
+
+- Crear y activar un entorno virtual
+- Instalar dependencias
+- Crear un archivo main.py
+- Definir un endpoint básico
+- Levantar un servidor web
+- Acceder a la documentación automática
+
+---
+
+En la siguiente clase agregaremos:
+
+- Parámetros en rutas
+- Query parameters
+- Validación con tipado
+- Introducción a Pydantic
