@@ -1,4 +1,4 @@
-# Clase 03 – Fundamentos de Python hasta POO con Tipado
+# Clase 01 – Fundamentos de Python hasta POO con Tipado
 
 Esta clase consolida los fundamentos de Python desde los tipos de datos básicos hasta Programación Orientada a Objetos (POO) aplicando tipado estático para documentación.
 
