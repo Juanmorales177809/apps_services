@@ -1,279 +1,220 @@
-# Clase 02 – FastAPI: Primer Servicio Web (Hello World)
+# Clase 03 – Pydantic, Dataclasses y Primer Repositorio en GitHub
 
-En esta clase iniciamos el desarrollo de servicios web usando **FastAPI**.
-
-El objetivo es comprender qué es un framework web moderno, por qué se utiliza en este curso y cómo crear nuestro primer servicio HTTP funcional.
+En esta clase abordamos dos herramientas fundamentales para modelado de datos en Python: **Pydantic** y **dataclasses**, y además realizamos el flujo profesional completo para crear un repositorio en GitHub usando autenticación SSH.
 
 ---
 
-## ¿Qué es FastAPI?
+# 🎯 Objetivos de la Clase
 
-FastAPI es un framework moderno para construir APIs con Python.
+Al finalizar esta clase el estudiante debe ser capaz de:
 
-Se caracteriza por:
+- Entender qué es Pydantic y para qué se usa.
+- Comprender cómo funciona el tipado en Python.
+- Comparar Pydantic con dataclasses.
+- Crear modelos de datos correctamente tipados.
+- Crear un repositorio en GitHub.
+- Configurar autenticación SSH.
+- Realizar el primer push a GitHub de forma profesional.
 
-- Alto rendimiento (basado en Starlette y Pydantic)
-- Uso de tipado (type hints) nativo de Python
-- Validación automática de datos
-- Documentación automática (Swagger y ReDoc)
-- Diseño limpio y fácil de escalar
+---
 
-Es ampliamente utilizado en:
+# 1️⃣ ¿Qué es Pydantic?
 
-- Backend de aplicaciones web
+**Pydantic** es una biblioteca de Python para validación y modelado de datos usando type hints.
+
+Permite:
+
+- Validar datos automáticamente.
+- Convertir tipos automáticamente.
+- Documentar entradas y salidas.
+- Generar esquemas JSON.
+- Integrarse perfectamente con FastAPI.
+
+Es ampliamente usada en:
+- APIs modernas
 - Microservicios
-- APIs para Machine Learning
 - Sistemas distribuidos
+- Machine Learning
+- Arquitecturas backend escalables
 
 ---
 
-## ¿Por qué FastAPI en este curso?
+# 2️⃣ Características Generales de Pydantic
 
-Este curso no busca solo “hacer backend”, sino aprender arquitectura limpia y buenas prácticas desde el inicio.
+- Basado en type hints nativos de Python.
+- Validación automática de tipos.
+- Conversión automática (ej: `"25"` → `int`).
+- Errores estructurados y claros.
+- Compatible con JSON.
+- Integración directa con FastAPI.
+- Alto rendimiento.
 
-FastAPI es ideal porque:
-
-- Obliga a usar tipado (documentación clara)
-- Genera documentación automática
-- Es simple para empezar
-- Escala bien para proyectos reales
-- Se integra fácilmente con bases de datos y microservicios
-
-Además, en cursos posteriores lo usaremos junto con:
-- Pydantic
-- Docker
-- Bases de datos
-- Arquitectura modular
-
----
-
-## Recursos Oficiales
-
-Documentación oficial:
-
-https://fastapi.tiangolo.com/
-
-Video recomendado (introducción práctica):
-
-https://www.youtube.com/watch?v=mpR8ngthqiE
-
----
-
-## Objetivo de la Clase
-
-Al finalizar esta clase el estudiante debe poder:
-
-- Instalar FastAPI
-- Crear un proyecto básico
-- Levantar un servidor local
-- Crear un endpoint tipo "Hello World"
-- Acceder a la documentación automática
-- Entender el flujo básico HTTP
-
-
-
-# 1️⃣ Entorno Virtual (venv)
-
-Trabajar con entorno virtual es obligatorio en proyectos profesionales.  
-Permite aislar dependencias por proyecto.
-
----
-
-## 🔹 Crear entorno virtual
-
-Desde la carpeta del proyecto:
-
-```bash
-python -m venv venv
-```
-
-Esto crea una carpeta llamada `venv` con el entorno aislado.
-
----
-
-## 🔹 Activar entorno virtual
-
-### En Git Bash (recomendado en Windows)
-
-```bash
-source venv/Scripts/activate
-```
-
-### En CMD (Windows)
-
-```bash
-venv\Scripts\activate
-```
-
-### En Linux / Mac
-
-```bash
-source venv/bin/activate
-```
-
-Cuando el entorno está activo, verás algo como:
-
-```
-(venv)
-```
-
-al inicio de la línea de comandos.
-
----
-
-## 🔹 Desactivar entorno virtual
-
-```bash
-deactivate
-```
-
----
-
-## 🔹 ¿Por qué usar Git Bash?
-
-Se recomienda usar **Git Bash** en Windows porque:
-
-- Usa comandos estilo Linux
-- Evita inconsistencias entre CMD y PowerShell
-- Es el entorno más común en proyectos reales
-- Facilita trabajo futuro con Docker y servidores Linux
-
----
-
-# 2️⃣ Instalación de FastAPI
-
-Con el entorno virtual activado:
-
-```bash
-pip install fastapi uvicorn
-```
-
-- `fastapi` → framework web
-- `uvicorn` → servidor ASGI para ejecutar la aplicación
-
----
-
-# 3️⃣ Primer Servicio – main.py
-
-Crear archivo `main.py`:
+Ejemplo básico:
 
 ```python
-from fastapi import FastAPI
+from pydantic import BaseModel
 
-app = FastAPI()
+class Usuario(BaseModel):
+    nombre: str
+    edad: int
 
-@app.get("/")
-def root() -> dict:
-    return {"message": "Hello World"}
+u = Usuario(nombre="Ana", edad="25")
+print(u.edad)  # 25 (convertido automáticamente a int)
 ```
 
 ---
 
-## 🔍 Explicación del Código
+# 3️⃣ ¿Qué son las Dataclasses?
 
-### `from fastapi import FastAPI`
+Las **dataclasses** son una herramienta estándar de Python (desde 3.7) que simplifica la creación de clases usadas principalmente para almacenar datos.
 
-Importa la clase principal del framework.
+Ejemplo:
 
----
+```python
+from dataclasses import dataclass
 
-### `app = FastAPI()`
-
-Crea la aplicación web.
-
-Esta instancia es el núcleo del servicio.
-
----
-
-### `@app.get("/")`
-
-Decorador que indica:
-
-- Método HTTP: GET
-- Ruta: `/`
-- Cuando alguien visite esa ruta, se ejecuta la función debajo.
-
----
-
-### `def root() -> dict:`
-
-Función que maneja la petición.
-
-- `root` → nombre de la función (puede ser cualquier nombre).
-- `-> dict` → tipado del retorno (documentación).
-- Devuelve un diccionario.
-- FastAPI lo convierte automáticamente a JSON.
-
----
-
-### `return {"message": "Hello World"}`
-
-Respuesta en formato JSON:
-
-```json
-{
-  "message": "Hello World"
-}
+@dataclass
+class Usuario:
+    nombre: str
+    edad: int
 ```
 
+Genera automáticamente:
+- __init__
+- __repr__
+- __eq__
+
 ---
 
-# 4️⃣ Levantar el Servidor
+# 4️⃣ Pydantic vs Dataclasses
 
-Desde la consola (con entorno virtual activo):
+| Característica | Dataclass | Pydantic |
+|---------------|-----------|----------|
+| Tipado | Sí | Sí |
+| Validación automática | No | Sí |
+| Conversión automática de tipos | No | Sí |
+| Errores estructurados | No | Sí |
+| Integración con FastAPI | No directa | Sí |
+| Uso recomendado | Modelos simples internos | APIs y validación externa |
+
+### Conclusión
+
+- **Dataclass** → ideal para modelos internos simples.
+- **Pydantic** → ideal para APIs, validación y entrada de datos externos.
+
+En este curso usaremos ambos para entender diferencias, pero FastAPI utiliza Pydantic como estándar.
+
+---
+
+# 5️⃣ Crear un Repositorio en GitHub
+
+## 🔹 Paso 1 – Crear repositorio en GitHub
+
+1. Ir a https://github.com
+2. Crear nuevo repositorio
+3. NO marcar "Add README"
+4. Crear repositorio
+
+---
+
+# 6️⃣ Configurar Clave SSH (Profesional)
+
+## 🔹 ¿Por qué usar SSH?
+
+- Evita escribir usuario y contraseña en cada push.
+- Es más seguro.
+- Es el estándar en entornos profesionales.
+- Permite automatización (CI/CD).
+- GitHub ya no recomienda autenticación por contraseña.
+
+---
+
+## 🔹 Generar clave SSH
+
+En Git Bash:
 
 ```bash
-uvicorn main:app --reload
+ssh-keygen -t ed25519 -C "tu_correo@ejemplo.com"
+```
+
+Presionar ENTER en todas las opciones.
+
+Se crea en:
+
+```
+~/.ssh/id_ed25519
+~/.ssh/id_ed25519.pub
 ```
 
 ---
 
-## 🔍 Explicación del comando
+## 🔹 Copiar clave pública
 
-- `main` → nombre del archivo (main.py)
-- `app` → instancia de FastAPI
-- `--reload` → reinicia automáticamente al guardar cambios
+```bash
+cat ~/.ssh/id_ed25519.pub
+```
+
+Copiar el contenido completo.
 
 ---
 
-# 5️⃣ Probar el Servicio
+## 🔹 Agregar clave a GitHub
 
-Abrir navegador:
+1. Ir a GitHub → Settings
+2. SSH and GPG keys
+3. New SSH key
+4. Pegar la clave pública
+5. Guardar
+
+---
+
+## 🔹 Probar conexión
+
+```bash
+ssh -T git@github.com
+```
+
+Si funciona, verás:
 
 ```
-http://127.0.0.1:8000/
-```
-
-Documentación automática:
-
-```
-http://127.0.0.1:8000/docs
-```
-
-Documentación alternativa:
-
-```
-http://127.0.0.1:8000/redoc
+Hi usuario! You've successfully authenticated.
 ```
 
 ---
 
-# 🎯 Resultado de la Clase
+# 7️⃣ Conectar Proyecto Local con GitHub
 
-Al finalizar esta práctica debes:
+En el proyecto local:
 
-- Crear y activar un entorno virtual
-- Instalar dependencias
-- Crear un archivo main.py
-- Definir un endpoint básico
-- Levantar un servidor web
-- Acceder a la documentación automática
+```bash
+git init
+git add .
+git commit -m "primer commit"
+```
+
+Agregar remoto:
+
+```bash
+git remote add origin git@github.com:USUARIO/NOMBRE_REPO.git
+```
+
+Subir al repositorio:
+
+```bash
+git branch -M main
+git push -u origin main
+```
 
 ---
 
-En la siguiente clase agregaremos:
+# 📌 Flujo Profesional Final
 
-- Parámetros en rutas
-- Query parameters
-- Validación con tipado
-- Introducción a Pydantic
+1. Crear entorno virtual.
+2. Desarrollar código.
+3. Usar tipado correctamente.
+4. Crear modelos con dataclass o Pydantic.
+5. Versionar con Git.
+6. Subir a GitHub usando SSH.
+7. Trabajar por ramas.
+
+---
