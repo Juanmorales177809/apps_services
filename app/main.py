@@ -1,7 +1,11 @@
-from fastapi import FastAPI
-from db import engine, Base, session
+from fastapi import FastAPI, Depends
+from db import engine, Base, session, get_db
 from schemas.laboratorios import LaboratorioBase
 from models.laboratorios import Laboratorio
+from sqlalchemy.orm import Session
+from crud.laboratorios import *
+
+
 
 app = FastAPI(
     title="API para servicios web",
@@ -13,9 +17,10 @@ app = FastAPI(
 def root():
     return {"Message": "Hola a todos"}
 
-@app.get("/laboratorios", response_model=list[LaboratorioBase])
-def listar_laboratorios():
-    db = session()
-    labs = db.query(Laboratorio).all()
-    db.close()
-    return labs
+@app.get("/laboratorios")
+def listar_laboratorios(db : Session = Depends(get_db)):
+    return get_all(db)
+
+@app.get("/laboratorio/{id_laboratorio}")
+def laboratorio_id(id_laboratorio : int, db : Session = Depends(get_db)):
+    return get_by_id(db, id_laboratorio)

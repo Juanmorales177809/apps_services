@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-database_url = "postgresql://admin:admin@190.248.28.132:3010/postgres"
+database_url = "postgresql://admin:admin@172.20.10.248:5432/postgres"
 engine = create_engine(database_url)
 
 Base = declarative_base()
@@ -12,3 +12,9 @@ session = sessionmaker(
     bind=engine
 )
 
+def get_db():
+    db = session()
+    try:
+        yield db
+    finally:
+        db.close()
