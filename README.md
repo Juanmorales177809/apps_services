@@ -8,6 +8,7 @@ El objetivo es entender cómo FastAPI permite **inyectar recursos automáticamen
 
 ---
 
+
 ## Problema inicial
 
 En un enfoque tradicional, cada endpoint maneja directamente la conexión a la base de datos:
@@ -19,9 +20,8 @@ def listar_laboratorios():
     labs = db.query(Laboratorio).all()
     db.close()
     return labs
-
+```
 ## Problemas
-
 - Código repetido en múltiples endpoints  
 - Riesgo de olvidar cerrar la conexión  
 - Mezcla de lógica de negocio con infraestructura  
@@ -69,7 +69,7 @@ def listar_laboratorios():
     labs = db.query(Laboratorio).all()
     db.close()
     return labs
-
+```
 ### Con DI
 
 ```python
@@ -80,7 +80,7 @@ def get_db():
     finally:
         db.close()
 
-
+```
 ## Beneficios de usar DI
 
 - Código más limpio  
