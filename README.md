@@ -1,109 +1,195 @@
-# Inyección de Dependencias (DI) en FastAPI
+# 🧪 Clase: Construcción de API con FastAPI (Routers + CRUD + HTTP Status)
 
-## Descripción
+## 🎯 Objetivo de la clase
 
-En esta clase se abordó el concepto de **Inyección de Dependencias (Dependency Injection - DI)** en FastAPI, como una técnica clave para construir aplicaciones limpias, reutilizables y mantenibles.
+En esta sesión aprenderás a:
 
-El objetivo es entender cómo FastAPI permite **inyectar recursos automáticamente** en los endpoints, evitando manejar manualmente aspectos como conexiones a base de datos.
+- Organizar una API usando **routers**
+- Implementar un **CRUD completo** (GET, POST, PUT, DELETE)
+- Entender el flujo de una petición en FastAPI
+- Manejar correctamente **códigos de estado HTTP**
+- Aplicar buenas prácticas de arquitectura básica
 
 ---
 
+## 🧱 Estructura del proyecto
 
-## Problema inicial
+```text
+proyecto/
+│
+├── main.py
+├── db.py
+├── api/
+│   └── laboratorios.py
+├── crud/
+│   └── laboratorios.py
+├── models/
+│   └── laboratorios.py
+└── schemas/
+    └── laboratorios.py
+```
 
-En un enfoque tradicional, cada endpoint maneja directamente la conexión a la base de datos:
+---
+
+## 🔄 Flujo de una petición en FastAPI
+
+```text
+Cliente → Router → (Validación + Dependencias) → Endpoint → CRUD → Base de datos → Respuesta
+```
+
+### Componentes clave:
+
+- **Router**: define las rutas
+- **Pydantic**: valida los datos de entrada
+- **Depends**: inyección de dependencias (ej: DB)
+- **CRUD**: lógica de acceso a datos
+- **ORM (SQLAlchemy)**: interacción con la base de datos
+
+---
+
+## 🧩 Routers en FastAPI
+
+Un router permite organizar la API por módulos.
+
+### Ejemplo:
 
 ```python
-@app.get("/laboratorios")
-def listar_laboratorios():
-    db = session()
-    labs = db.query(Laboratorio).all()
-    db.close()
-    return labs
+router = APIRouter(
+    prefix="/laboratorios",
+    tags=["Laboratorios"]
+)
 ```
-## Problemas
-- Código repetido en múltiples endpoints  
-- Riesgo de olvidar cerrar la conexión  
-- Mezcla de lógica de negocio con infraestructura  
 
-El endpoint hace más de lo que debería.
+### Beneficios:
 
----
-
-## ¿Qué es Inyección de Dependencias?
-
-Una dependencia es cualquier recurso o lógica que una función necesita para ejecutarse.
-
-### Ejemplos
-
-- Conexión a base de datos  
-- Usuario autenticado  
-- Configuración  
-- Validaciones  
-
-### Idea clave
-
-No crees lo que necesitas, recíbelo.
-
-FastAPI se encarga de proporcionar automáticamente esas dependencias.
-
-## Flujo completo de ejecución
-
-1. FastAPI detecta `Depends(get_db)`  
-2. Ejecuta `get_db()`  
-3. Llega a `yield db`  
-4. Inyecta `db` en el endpoint  
-5. Ejecuta el endpoint  
-6. Finaliza el endpoint  
-7. Ejecuta `db.close()`  
+- Organización modular
+- Escalabilidad
+- Código más limpio
+- Mejor documentación en Swagger
 
 ---
 
-## Antes vs Después
+## 🗂️ CRUD de Laboratorios
 
-### Sin DI
+### 🔍 GET - Listar
 
 ```python
-def listar_laboratorios():
-    db = session()
-    labs = db.query(Laboratorio).all()
-    db.close()
-    return labs
+def get_all(db: Session):
+    return db.query(Laboratorio).all()
 ```
-### Con DI
+
+---
+
+### 🔎 GET - Por ID
 
 ```python
-def get_db():
-    db = session()
-    try:
-        yield db
-    finally:
-        db.close()
-
+def get_by_id(db: Session, id_laboratorio: int):
+    return db.query(Laboratorio).filter(
+        Laboratorio.idLaboratorio == id_laboratorio
+    ).first()
 ```
-## Beneficios de usar DI
-
-- Código más limpio  
-- Reutilización de lógica  
-- Menos errores (manejo automático)  
-- Separación de responsabilidades  
-- Mejor mantenimiento  
 
 ---
 
-## Otros usos de DI
+### ➕ POST - Crear
 
-FastAPI utiliza DI para:
-
-- Autenticación (JWT, OAuth2)  
-- Validación de permisos  
-- Configuración global  
-- Servicios reutilizables  
+```python
+def create(db: Session, data: LaboratorioBase):
+    nuevo_laboratorio = Laboratorio(
+        nombre=data.nombre,
+        ubicacion=data.ubicacion,
+        tipo=data.tipo
+    )
+    db.add(nuevo_laboratorio)
+    db.commit()
+    db.refresh(nuevo_laboratorio)
+    return nuevo_laboratorio
+```
 
 ---
 
-## Conclusión
+### ✏️ PUT - Actualizar
 
-La Inyección de Dependencias permite que los endpoints se enfoquen únicamente en la lógica de negocio, delegando la gestión de recursos a FastAPI.
+```python
+def update(db: Session, id_laboratorio: int, data: LaboratorioBase):
+    laboratorio = db.query(Laboratorio).filter(
+        Laboratorio.idLaboratorio == id_laboratorio
+    ).first()
 
-El endpoint se enfoca en el negocio, FastAPI maneja la infraestructura.
+    if laboratorio is None:
+        return None
+
+    laboratorio.nombre = data.nombre
+    laboratorio.ubicacion = data.ubicacion
+    laboratorio.tipo = data.tipo
+
+    db.commit()
+    db.refresh(laboratorio)
+    return laboratorio
+```
+
+---
+
+### ❌ DELETE - Eliminar
+
+```python
+def delete(db: Session, id_laboratorio: int):
+    laboratorio = db.query(Laboratorio).filter(
+        Laboratorio.idLaboratorio == id_laboratorio
+    ).first()
+
+    if laboratorio is None:
+        return None
+
+    db.delete(laboratorio)
+    db.commit()
+
+    return laboratorio
+```
+
+---
+
+## 🌐 Endpoints
+
+```python
+@router.get("/")
+def listar_laboratorios(...)
+
+@router.get("/{id_laboratorio}")
+def laboratorio_id(...)
+
+@router.post("/")
+def crear_laboratorio(...)
+
+@router.put("/{id_laboratorio}")
+def actualizar_laboratorio(...)
+
+@router.delete("/{id_laboratorio}")
+def eliminar_laboratorio(...)
+```
+
+---
+
+## 📦 Schema (Pydantic)
+
+```python
+from pydantic import BaseModel
+
+class LaboratorioBase(BaseModel):
+    nombre: str
+    ubicacion: str
+    tipo: str
+```
+
+---
+
+## 📡 Códigos de estado HTTP
+
+| Código | Significado | Ejemplo |
+|--------|------------|--------|
+| 200 | OK | GET exitoso |
+| 201 | Created | POST exitoso |
+| 400 | Bad Request | Datos inválidos |
+| 404 | Not Found | ID no existe |
+| 422 | Unprocessable Entity | Error de validación |
+| 500 | Server Error | Error interno |
