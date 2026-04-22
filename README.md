@@ -1,304 +1,157 @@
-# 🔐 Autenticación con JWT en FastAPI
-### Módulo: Seguridad y Proyección  
-### Curso: Aplicaciones y Servicios Web
+# Clase: Autorización y Scopes con JWT
 
-Este laboratorio introduce el concepto de autenticación basada en **JSON Web Tokens (JWT)** utilizando **FastAPI**. A lo largo de la clase se explicarán los fundamentos teóricos, la arquitectura del sistema y la implementación práctica, finalizando con la validación del funcionamiento mediante Swagger.
-
----
-
-## 📚 Contenido de la Clase
-
-1. Introducción a la seguridad en servicios web  
-2. Autenticación vs. Autorización  
-3. Problemas de las sesiones tradicionales  
-4. ¿Qué es un JSON Web Token (JWT)?  
-5. Estructura de un JWT  
-6. Librerías y herramientas utilizadas  
-7. Arquitectura del proyecto  
-8. Implementación de la autenticación  
-9. Generación y validación del token  
-10. Protección de endpoints  
-11. Instalación de dependencias  
-12. Pruebas en Swagger  
+## 📌 Descripción
+Esta clase introduce el concepto de **autorización** en aplicaciones web utilizando **JWT (JSON Web Token)**. Se diferencia claramente entre autenticación y autorización, y se implementa control de acceso basado en **scopes (permisos)**.
 
 ---
 
-## 🔐 1. Introducción a la Seguridad en Servicios Web
+## 🎯 Objetivos de aprendizaje
+Al finalizar la clase, el estudiante podrá:
 
-Las APIs modernas requieren mecanismos de seguridad que permitan verificar la identidad de los usuarios y proteger la información. La autenticación basada en tokens es una solución eficiente, escalable y ampliamente utilizada en aplicaciones web y móviles.
+- Diferenciar autenticación vs autorización
+- Entender la estructura de un JWT
+- Identificar el rol del payload en la gestión de permisos
+- Implementar control de acceso usando scopes
+- Validar tokens en el backend
 
 ---
 
-## 👤 2. Autenticación vs. Autorización
+## 🧠 Conceptos clave
 
-| Concepto | Descripción |
-|----------|-------------|
-| **Autenticación** | Verifica la identidad del usuario. |
-| **Autorización** | Determina qué acciones puede realizar el usuario. |
+### 🔐 Autenticación
+Verifica la identidad del usuario.
+
+### 🛂 Autorización
+Define qué acciones puede realizar el usuario.
+
+### 🎟️ JWT (JSON Web Token)
+Token que transporta información del usuario y permisos.
+
+### 🎯 Scopes
+Permisos específicos dentro del token.
 
 Ejemplo:
-- Autenticación: Iniciar sesión con usuario y contraseña.
-- Autorización: Permitir acceso solo a usuarios administradores.
-
----
-
-## 🔑 3. ¿Qué es JWT?
-
-**JWT (JSON Web Token)** es un estándar definido en el **RFC 7519** que permite transmitir información de forma segura entre dos partes.
-
-### Características
-- Compacto y eficiente.
-- Autocontenido.
-- Firmado digitalmente.
-- Stateless (sin estado en el servidor).
-
-### Estructura de un JWT
-Un token consta de tres partes separadas por puntos:
-
-```
-HEADER.PAYLOAD.SIGNATURE
-```
-
-#### Header
-Contiene el algoritmo de firma.
 ```json
 {
-  "alg": "HS256",
-  "typ": "JWT"
+  "sub": "juan",
+  "scopes": ["read", "write"]
 }
 ```
 
-#### Payload
-Contiene la información del usuario.
-```json
-{
-  "sub": "admin",
-  "exp": 1776366295
-}
-```
+---
 
-#### Signature
-Garantiza la integridad del token mediante el `SECRET_KEY`.
+## 🧩 Flujo del sistema
+
+1. Usuario hace login
+2. Backend valida credenciales
+3. Backend genera JWT con scopes
+4. Cliente guarda el token
+5. Cliente envía el token en cada request
+6. Backend valida:
+   - Firma
+   - Expiración
+   - Scopes
+7. Acceso permitido o denegado
 
 ---
 
-## 🛠️ 4. Librerías y Herramientas
+## ⚙️ Implementación en FastAPI
 
-| Librería | Descripción |
-|----------|-------------|
-| **FastAPI** | Framework para crear APIs modernas en Python. |
-| **PyJWT** | Generación y validación de tokens JWT. |
-| **pwdlib** | Hash seguro de contraseñas. |
-| **SQLAlchemy** | ORM para la gestión de bases de datos. |
-| **python-dotenv** | Gestión de variables de entorno. |
-| **Uvicorn** | Servidor ASGI para ejecutar la aplicación. |
+### Dependencias
+```bash
+pip install fastapi uvicorn python-jose passlib[bcrypt]
+```
 
 ---
 
-## 🏗️ 5. Arquitectura del Proyecto
-
-```
-project/
-│── api/
-│   └── auth.py
-│
-│── crud/
-│   └── auth.py
-│
-│── models/
-│   └── usuario.py
-│
-│── schemas/
-│   └── auth.py
-│
-│── security/
-│   └── auth.py
-│
-│── db.py
-│── main.py
-│── .env
-│── requirements.txt
-└── README.md
-```
-
-### Descripción de Carpetas
-
-| Carpeta | Función |
-|---------|---------|
-| **api/** | Define los endpoints. |
-| **crud/** | Maneja consultas a la base de datos. |
-| **models/** | Define las entidades. |
-| **schemas/** | Define la validación de datos. |
-| **security/** | Implementa la autenticación JWT. |
-| **db.py** | Configura la conexión a la base de datos. |
-
----
-
-## 🔑 6. Variables de Entorno
-
-Crear un archivo `.env` en la raíz del proyecto:
-
-```env
-SECRET_KEY=mi_clave_secreta_super_segura
-```
-
-Para generar una clave segura:
+### Ejemplo básico de scopes
 
 ```python
-import secrets
-print(secrets.token_hex(32))
+from fastapi import FastAPI, Security, HTTPException
+from fastapi.security import OAuth2PasswordBearer, SecurityScopes
+
+app = FastAPI()
+
+oauth2_scheme = OAuth2PasswordBearer(
+    tokenUrl="login",
+    scopes={
+        "read": "Leer datos",
+        "write": "Escribir datos",
+        "admin": "Acceso total"
+    }
+)
+
+
+def get_current_user(security_scopes: SecurityScopes, token: str = Security(oauth2_scheme)):
+    payload = {"scopes": ["read"]}  # Simulación
+
+    for scope in security_scopes.scopes:
+        if scope not in payload["scopes"]:
+            raise HTTPException(status_code=403, detail="No autorizado")
+
+    return payload
+
+
+@app.get("/read")
+def read_data(user=Security(get_current_user, scopes=["read"])):
+    return {"msg": "Lectura permitida"}
 ```
 
 ---
 
-## ⚙️ 7. Instalación de Dependencias
+## 🧪 Actividad práctica
 
-Instalar las librerías necesarias:
+### Objetivo
+Implementar control de acceso con scopes.
 
-```bash
-pip install fastapi uvicorn pyjwt pwdlib python-dotenv sqlalchemy
-```
+### Tareas
 
-Opcionalmente, guardar las dependencias:
-
-```bash
-pip freeze > requirements.txt
-```
-
----
-
-## ▶️ 8. Ejecución del Proyecto
-
-Iniciar el servidor:
-
-```bash
-uvicorn main:app --reload
-```
-
-Acceder a la aplicación:
-
-- API:
-  ```
-  http://127.0.0.1:8000
-  ```
-
-- Documentación Swagger:
-  ```
-  http://127.0.0.1:8000/docs
-  ```
+1. Crear endpoint `/read` → requiere `read`
+2. Crear endpoint `/write` → requiere `write`
+3. Crear endpoint `/admin` → requiere `admin`
+4. Modificar el token para incluir scopes
+5. Validar scopes en backend
 
 ---
 
-## 🧪 9. Pruebas en Swagger
+## ⚠️ Buenas prácticas
 
-### Paso 1: Iniciar Sesión
-Ejecutar el endpoint:
-
-```
-POST /auth/login
-```
-
-Ejemplo de solicitud:
-
-```json
-{
-  "username": "admin",
-  "password": "123456"
-}
-```
-
-Respuesta esperada:
-
-```json
-{
-  "access_token": "eyJhbGciOiJIUzI1NiIs...",
-  "token_type": "bearer"
-}
-```
+- Validar siempre el token en backend
+- Usar expiración corta
+- No almacenar información sensible en el payload
+- Asignar permisos mínimos necesarios
 
 ---
 
-### Paso 2: Autorizar el Token
+## ❌ Errores comunes
 
-1. Hacer clic en **Authorize**.
-2. Pegar el token en el campo **Value**:
-
-```
-Bearer eyJhbGciOiJIUzI1NiIs...
-```
-
-3. Presionar **Authorize** y luego **Close**.
+- No validar firma
+- Ignorar expiración
+- No validar scopes
 
 ---
 
-### Paso 3: Acceder a un Endpoint Protegido
+## 💥 Mensaje clave
 
-Ejecutar:
-
-```
-GET /auth/me
-```
-
-Respuesta esperada:
-
-```json
-{
-  "username": "admin",
-  "correo": "admin@correo.com"
-}
-```
+> El backend es quien decide el acceso, no el cliente.
+>
+> Los permisos viajan en el token y controlan lo que el usuario puede hacer.
 
 ---
 
-## ❌ Errores Comunes
+## 🚀 Conclusión
 
-| Error | Causa | Solución |
-|------|-------|----------|
-| 401 Unauthorized | Token inválido o expirado | Generar uno nuevo |
-| Token inválido | SECRET_KEY incorrecta | Verificar `.env` |
-| Not authenticated | No se autorizó en Swagger | Usar botón **Authorize** |
-| Module not found | Dependencias no instaladas | Ejecutar `pip install` |
+JWT permite implementar autenticación sin estado y autorización basada en permisos de forma escalable y eficiente.
 
 ---
 
-## 🔄 Flujo de Autenticación
+## 📚 Recomendaciones
 
-```
-Usuario → Login → Validación de Credenciales
-        → Generación de JWT
-        → Cliente almacena el Token
-        → Solicitud con Authorization: Bearer Token
-        → Validación del Token
-        → Acceso al Recurso Protegido
-```
+- Revisar documentación de FastAPI Security
+- Explorar OAuth2
+- Implementar roles + scopes en proyectos reales
 
 ---
 
-## 📖 Referencias
-
-- RFC 7519 – JSON Web Token: https://datatracker.ietf.org/doc/html/rfc7519  
-- Documentación FastAPI: https://fastapi.tiangolo.com  
-- PyJWT: https://pyjwt.readthedocs.io  
-- OWASP Authentication Guide: https://owasp.org  
-
----
-
-## 👨‍🏫 Autor
-
-**Curso:** Aplicaciones y Servicios Web  
-**Módulo:** Seguridad y Proyección  
-**Tema:** Autenticación con JWT usando FastAPI  
-
----
-
-## ✅ Conclusión
-
-En esta práctica se aprendió a:
-
-- Implementar autenticación con JWT.
-- Proteger endpoints en FastAPI.
-- Utilizar variables de entorno para mayor seguridad.
-- Integrar FastAPI con SQLAlchemy.
-- Validar el funcionamiento mediante Swagger.
-
-La autenticación basada en JWT es un estándar moderno, escalable y ampliamente utilizado en el desarrollo de servicios web seguros.
+## 🧑‍💻 Autor
+Clase de Aplicaciones y Servicios Web

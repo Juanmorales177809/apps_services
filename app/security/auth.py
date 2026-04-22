@@ -8,6 +8,7 @@ from pwdlib import PasswordHash
 from sqlalchemy.orm import Session
 from crud.auth import get_user_by_username
 from db import get_db
+from security.scopes import get_scopes_for_role
 
 
 load_dotenv()
@@ -63,3 +64,19 @@ def get_current_user(
         raise HTTPException(status_code=401, detail="Usuario no encontrado")
 
     return user
+
+
+def require_scopes(*required_scopes: str):
+    def dependency(user=Depends(get_current_user)):
+        user_scopes = get_scopes_for_role(user.rol)
+        missing_scopes = set(required_scopes) - user_scopes
+
+        if missing_scopes:
+            raise HTTPException(
+                status_code=403,
+                detail="No tiene permisos para realizar esta accion",
+            )
+
+        return user
+
+    return dependency
