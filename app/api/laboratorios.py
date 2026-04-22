@@ -3,11 +3,13 @@ from sqlalchemy.orm import Session
 from db import get_db
 from crud.laboratorios import get_all, get_by_id, create, update
 from schemas.laboratorios import LaboratorioBase
+from security.auth import get_current_user
 
 
 router = APIRouter(
     prefix="/laboratorios",
-    tags=["Laboratorios"]
+    tags=["Laboratorios"],
+    dependencies=[Depends(get_current_user)],
 )
 
 @router.get("/")
