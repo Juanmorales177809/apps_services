@@ -1,504 +1,273 @@
-# Guía de Trabajo Práctico Experimental — Laboratorio 3
+# Clase: DevOps, Integración Continua, Entrega Continua e Implementación Continua
 
-**Desarrollo de servicios web seguros con JWT, scopes y reglas de autorización utilizando FastAPI y PostgreSQL**
+## Contexto general de la clase
 
----
+Esta clase parte de un caso cercano: el desarrollo de un software para la gestión de calidad del ITM. La idea no es comenzar con definiciones aisladas, sino entender cómo un equipo real trabaja alrededor de un sistema que debe evolucionar constantemente.
 
-| Campo | Valor |
-|---|---|
-| **Código de guía** | 003 |
-| **Laboratorio** | Laboratorio DevOps |
-| **Tiempo de trabajo práctico estimado** | 4 días |
-| **Asignatura** | Aplicaciones y Servicios Web |
-| **Programa académico** | Tecnología en Desarrollo de Software |
-| **Elaborado por** | Juan Carlos Morales Guerra |
-| **Revisado por** | Juan Carlos Morales Guerra |
-| **Versión** | 002 |
-| **Fecha** | 27-02-2026 |
+En este escenario intervienen dos actores principales. Por un lado está el personal de calidad, que conoce los procesos, los formatos, los requisitos, las auditorías, los registros, las evidencias y las necesidades reales del sistema. Por otro lado está el equipo de desarrollo, encargado de convertir esas necesidades en funcionalidades concretas: pantallas, formularios, bases de datos, validaciones, reportes, permisos, carga de archivos y flujos de trabajo.
 
----
+El personal de calidad identifica necesidades o problemas. El equipo de desarrollo analiza esas solicitudes, implementa cambios, prueba el sistema y entrega nuevas versiones. En apariencia, este flujo parece simple, pero cuando el software crece aparecen problemas de comunicación, integración, pruebas, despliegue y retroalimentación.
 
-## 1. Competencias, Contenido Temático e Indicador de Logro
+Por ejemplo, el personal de calidad puede solicitar que el sistema permita registrar evidencias de capacitación para cada persona del laboratorio. El equipo de desarrollo debe traducir esa necesidad en una solución técnica: crear o ajustar tablas en la base de datos, construir endpoints en el backend, diseñar formularios en el frontend, validar campos, controlar permisos y permitir adjuntar archivos.
 
-| Competencias | Contenido Temático | Indicador de Logro |
-|---|---|---|
-| Diseñar y desarrollar servicios web seguros utilizando FastAPI, PostgreSQL, JWT y scopes, aplicando reglas de autorización, validación de datos y control de acceso según roles dentro de una mesa de servicios para laboratorios universitarios. | Autenticación con JWT. Autorización basada en scopes. Roles de usuario y permisos. Protección de endpoints en FastAPI. Persistencia de datos con PostgreSQL y SQLAlchemy. Modelado de usuarios, laboratorios, servicios y tickets. Reglas de negocio para flujo de estados del ticket. Validación de acceso según rol, scope y relación con el ticket. Pruebas de endpoints protegidos en Swagger. Trabajo colaborativo con Git y GitHub. | El estudiante implementa una API segura para la gestión de tickets de servicios en laboratorios, utilizando JWT para autenticación, scopes para autorización y PostgreSQL para persistencia, aplicando reglas de negocio que controlan la creación, asignación, actualización, consulta y finalización de tickets según el rol del usuario. |
+El problema aparece cuando estas entregas se manejan de manera manual, tardía o desorganizada. Si los requerimientos llegan incompletos, desarrollo puede construir algo que no cumple con lo esperado. Si desarrollo entrega tarde o sin pruebas suficientes, calidad detecta errores al final. Si operaciones recibe paquetes con instrucciones manuales, cada despliegue se vuelve una tarea lenta y riesgosa.
 
----
+A partir de este caso se construye toda la clase: primero se analiza el flujo tradicional, luego se identifican sus puntos débiles, y finalmente se introducen los conceptos de integración continua, entrega continua e implementación continua.
 
-## 2. Fundamento Teórico
+## Flujo de trabajo tradicional
 
-El desarrollo de servicios web modernos requiere mecanismos que permitan identificar a los usuarios y controlar las acciones que pueden realizar dentro del sistema. La **autenticación** permite verificar la identidad de un usuario, mientras que la **autorización** define qué operaciones está permitido ejecutar según sus permisos.
+En un flujo tradicional de desarrollo de software, el proceso suele avanzar por etapas separadas.
 
-**JSON Web Token (JWT)** es un estándar abierto (RFC 7519) utilizado para transmitir información segura entre cliente y servidor mediante un token firmado. Después de iniciar sesión, el servidor genera un token compuesto por tres partes: encabezado (*header*), carga útil (*payload*) y firma (*signature*), codificadas en Base64URL y separadas por puntos. El cliente envía este token en cada solicitud protegida dentro del encabezado HTTP `Authorization: Bearer <token>`. De esta manera, la API puede reconocer al usuario sin mantener una sesión tradicional en el servidor.
+Primero está el equipo de desarrollo de software. Este equipo recibe requerimientos, escribe código, modifica funcionalidades y prepara los cambios. Luego esos cambios se guardan en Git, que funciona como repositorio central del código. Git permite versionar, registrar cambios y conocer quién modificó qué parte del sistema.
 
-Los **scopes** permiten representar permisos específicos dentro del sistema. A diferencia de un rol general (como `admin` o `tecnico`), un scope describe una acción concreta, por ejemplo `tickets:crear` o `tickets:finalizar`. Esto facilita controlar el acceso a los endpoints de forma más precisa y escalable, ya que un mismo rol puede tener múltiples scopes y un scope puede ser compartido entre roles diferentes.
+Después aparece el equipo de integración. En un modelo tradicional, la integración no siempre ocurre de manera frecuente. Muchas veces cada desarrollador trabaja por su lado y, después de cierto tiempo, alguien debe juntar todos los cambios. En ese momento aparecen conflictos, errores de dependencias, diferencias entre versiones, funcionalidades que se pisan entre sí o cambios que funcionan individualmente pero fallan al combinarse.
 
-**FastAPI** implementa autenticación y autorización mediante el sistema de dependencias de Python. La clase `OAuth2PasswordBearer` gestiona la extracción del token del encabezado, mientras que `SecurityScopes` permite declarar qué scopes requiere cada endpoint. Combinado con **SQLAlchemy** como ORM y **PostgreSQL** como motor de base de datos, FastAPI permite construir servicios web con persistencia de datos, validación mediante **Pydantic** y separación clara entre modelos, esquemas y lógica de acceso a datos.
+Luego viene la compilación. En esta etapa se toma el código integrado y se intenta construir una versión funcional del sistema. En un proyecto web puede significar instalar dependencias, construir el frontend, preparar el backend, validar que el proyecto arranque correctamente o generar archivos finales.
 
-En este taller, estos conceptos se aplican al desarrollo de una **mesa de servicios para laboratorios universitarios**. El sistema debe controlar que un usuario pueda crear un ticket; que el responsable técnico lo reciba y asigne a un auxiliar o técnico especializado; que el técnico asignado atienda la solicitud y actualice el estado; y que finalmente el responsable técnico revise y cierre el caso. Este flujo exige combinar autenticación, autorización y reglas de negocio para garantizar que cada usuario solo pueda realizar las acciones permitidas dentro del proceso.
+Si la compilación falla, el equipo debe devolverse para encontrar la causa. El problema es que, si la integración se hizo tarde y con muchos cambios acumulados, no siempre es fácil identificar qué cambio produjo el fallo.
 
----
+Después viene el empaquetado. Aquí se prepara una versión del sistema para ser entregada o instalada. El paquete puede ser una carpeta de build, un archivo comprimido, un instalador, una imagen Docker o un conjunto de archivos listos para ser desplegados.
 
-## 3. Objetivos
+El punto crítico es que, en el flujo tradicional, muchas validaciones importantes ocurren tarde. Primero se desarrolla, luego se integra, luego se compila, luego se empaqueta y solo después se detecta si algo quedó mal. Esto hace que los errores sean más costosos de corregir.
 
-### Objetivo General
+En el caso del software de gestión de calidad, esto sería como esperar varias semanas para juntar cambios del módulo de personal, laboratorios, evidencias, permisos y reportes, y apenas al final intentar construir una versión completa. Si algo falla, el equipo pierde tiempo tratando de ubicar el origen del problema.
 
-Desarrollar una API segura para la gestión de tickets de servicios en laboratorios universitarios, utilizando FastAPI, PostgreSQL, JWT y scopes para controlar la autenticación, autorización y flujo de atención de las solicitudes.
+## Entrega y despliegue tradicional
 
-### Objetivos Específicos
+Después del empaquetado comienza otra parte del proceso: llevar el paquete a un entorno donde pueda probarse o utilizarse.
 
-- Diseñar el modelo de datos para usuarios, laboratorios, servicios y tickets.
-- Implementar autenticación de usuarios mediante JWT.
-- Definir roles y scopes para controlar el acceso a los endpoints.
-- Proteger rutas de la API según los permisos requeridos.
-- Implementar reglas de negocio para la creación, recepción, asignación, atención y finalización de tickets.
-- Validar la visibilidad de los tickets según el rol y la relación del usuario con la solicitud.
-- Probar los endpoints protegidos mediante Swagger o herramienta equivalente.
+En el modelo tradicional, el equipo de desarrollo no entrega únicamente el software. También entrega instrucciones. Estas instrucciones pueden indicar qué archivos copiar, qué variables configurar, qué dependencias instalar, qué comandos ejecutar, qué servicios reiniciar o qué rutas modificar.
 
----
+El equipo de operaciones recibe ese paquete y las instrucciones asociadas. Su responsabilidad es preparar el servidor, instalar la aplicación, configurar el entorno y dejar el sistema funcionando.
 
-## 4. Recursos Requeridos
+Luego el sistema se instala en un entorno de prueba. Este no es el sitio público final, sino un espacio controlado donde se revisa si la aplicación carga, si el backend responde, si la base de datos está disponible, si las rutas funcionan y si los cambios no dañaron funcionalidades existentes.
 
-### Equipos
+Después interviene el equipo de garantía de calidad. Este equipo revisa que lo entregado cumpla con lo solicitado. En el caso del sistema de gestión de calidad, puede validar si un formulario guarda correctamente, si una evidencia se carga, si los permisos funcionan, si el registro queda asociado a la persona correcta o si un reporte muestra la información esperada.
 
-- Computador personal o estación de trabajo por estudiante.
+Finalmente, si todo está correcto, el sistema se publica en el sitio web público. Allí los usuarios finales acceden a la versión liberada.
 
-### Herramientas de Software
+El problema es que este flujo tiene mucha transferencia manual entre equipos. Desarrollo entrega a operaciones, operaciones despliega, calidad valida y solo después se publica. Cada paso implica espera, comunicación, instrucciones y riesgo de error.
 
-- Sistema operativo Linux o Windows.
-- Python 3.10 o superior.
-- FastAPI.
-- PostgreSQL.
-- SQLAlchemy.
-- Uvicorn.
-- Git.
-- Cuenta en GitHub.
-- Editor de código (recomendado: Visual Studio Code).
+Si algo falla en el entorno de prueba, hay que devolverse al equipo de desarrollo, corregir, volver a compilar, volver a empaquetar, volver a entregar y volver a probar. Este ciclo puede ser lento, especialmente cuando el sistema crece.
 
-### Dependencias Python del Proyecto
+## Iteración en el desarrollo de software
 
-El archivo `requirements.txt` debe incluir como mínimo las siguientes dependencias:
+El proceso no termina cuando el sitio web queda publicado. Cuando los usuarios empiezan a utilizar el sistema, aparecen nuevos hallazgos: errores, mejoras, ajustes de proceso o nuevas necesidades.
 
-- `fastapi`
-- `uvicorn`
-- `sqlalchemy`
-- `psycopg2-binary`
-- `python-jose[cryptography]` — generación y verificación de tokens JWT
-- `passlib[bcrypt]` — hashing seguro de contraseñas
-- `python-multipart` — requerido por el formulario de login de FastAPI
-- `python-dotenv` — manejo de variables de entorno desde archivo `.env`
+Por eso se habla de iteración. El software no se construye una sola vez y se abandona. El software evoluciona. Cada entrega genera retroalimentación, y esa retroalimentación alimenta una nueva versión.
 
-> **Nota:** Las últimas cuatro dependencias son obligatorias para implementar JWT y autenticación segura. Sin ellas no es posible completar las Actividades 4 y 5.
+En el caso del sistema de gestión de calidad, el personal puede encontrar que falta un campo, que una validación debe cambiar, que un reporte no filtra correctamente, que un permiso no está bien definido o que un proceso debe ajustarse. Esos hallazgos regresan al equipo de desarrollo y el ciclo comienza de nuevo.
 
-### Material Bibliográfico y Recursos Digitales
+El problema del enfoque tradicional es que cada iteración puede ser pesada. Si cada cambio debe pasar manualmente por integración, compilación, empaquetado, operaciones, pruebas, validación y publicación, entonces mejorar el sistema toma demasiado tiempo.
 
-- Documentación oficial de FastAPI: https://fastapi.tiangolo.com
-- OAuth2 con scopes en FastAPI: https://fastapi.tiangolo.com/advanced/security/oauth2-scopes/
-- Documentación oficial de Pydantic: https://docs.pydantic.dev
-- Documentación oficial de Python: https://docs.python.org
-- Documentación de python-jose: https://python-jose.readthedocs.io
-- Documentación de passlib: https://passlib.readthedocs.io
-- Guías básicas de uso de Git y GitHub.
-- Repositorio de clase: https://github.com/Juanmorales177809/apps_services.git
+La necesidad es pasar de un ciclo manual, lento y frágil a un ciclo más automatizado, frecuente y confiable.
 
----
+## Puntos débiles del modelo tradicional
 
-## 5. Aspectos de Seguridad
+El primer punto débil es la integración. En un flujo tradicional, integrar suele tomar mucho tiempo y esfuerzo porque muchas veces se hace tarde y de forma manual. Cuando varios desarrolladores trabajan en partes diferentes del sistema, los conflictos aparecen al juntar el código.
 
-La práctica descrita en esta guía corresponde a una actividad de desarrollo de software, por lo cual no se identifican riesgos físicos o químicos asociados al uso de laboratorios experimentales.
+Un cambio puede funcionar bien de forma aislada, pero fallar al mezclarse con otros módulos. Por ejemplo, un desarrollador modifica el formulario de personal, otro cambia la estructura de la base de datos y otro ajusta permisos. Al integrar, pueden aparecer errores por variables renombradas, rutas inexistentes, migraciones incompletas o dependencias incompatibles.
 
-Sin embargo, se recomienda tener en cuenta las siguientes consideraciones:
+El segundo punto débil son los problemas de fusión intermedia. Si al unir cambios aparece un conflicto o un error importante, el equipo puede detenerse hasta resolverlo. Esto atrasa el proceso y genera dependencia entre personas o áreas.
 
-- Mantener una postura adecuada durante el uso prolongado del computador para evitar fatiga o lesiones musculares.
-- Evitar la manipulación inadecuada de cables o conexiones eléctricas de los equipos.
-- Realizar copias de seguridad periódicas del código desarrollado para evitar pérdida de información.
-- Nunca incluir credenciales sensibles (contraseñas, cadenas de conexión, claves JWT) directamente en el código fuente. Siempre usar variables de entorno mediante un archivo `.env`, el cual debe estar excluido del repositorio mediante `.gitignore`.
+El tercer punto son las iteraciones largas. Cuando el ciclo de desarrollo, integración, pruebas y entrega toma mucho tiempo, la retroalimentación llega tarde. Los problemas pequeños se acumulan y terminan convirtiéndose en problemas grandes.
 
----
+Otro punto crítico es que la solución de problemas ocurre al final de la iteración. En el modelo tradicional, muchos defectos se descubren cuando el sistema ya fue integrado, empaquetado o incluso desplegado en pruebas. Corregir tarde es más costoso que corregir temprano.
 
-## 6. Procedimiento o Metodología para el Desarrollo
+También aparece un ciclo largo de feedback para defectos funcionales. Un defecto funcional ocurre cuando el sistema técnicamente funciona, pero no hace exactamente lo que el usuario necesita. Por ejemplo, un formulario guarda datos, pero no guarda la evidencia correcta. Un reporte se genera, pero no filtra por laboratorio. Una pantalla permite crear un registro, pero no valida un campo obligatorio.
 
-La práctica se desarrollará en equipos de trabajo conformados por dos a tres estudiantes.
+En un proceso tradicional, estos defectos suelen descubrirse demasiado tarde.
 
----
+La conclusión es que el problema no es únicamente técnico. Es un problema de proceso. Si la integración es manual, los errores se descubren tarde, las iteraciones son largas y el feedback demora, el equipo termina gastando más tiempo corrigiendo fallos acumulados que entregando valor.
 
-### Actividad 1: Configuración Inicial del Proyecto
+## Integración continua
 
-- Crear repositorio en GitHub.
-- Clonar el repositorio en el computador local.
-- Crear y activar el entorno virtual.
-- Instalar las dependencias listadas en la sección de Recursos Requeridos.
-- Generar el archivo `requirements.txt`.
-- Crear el archivo `.gitignore` (debe incluir la carpeta del entorno virtual y el archivo `.env`).
-- Crear el archivo `.env` para almacenar las variables de entorno sensibles: cadena de conexión a PostgreSQL, `SECRET_KEY`, algoritmo de firma y tiempo de expiración del token.
+La integración continua, conocida como CI por sus siglas en inglés, busca resolver los problemas asociados a la integración tardía.
 
----
+CI no significa desplegar en producción. CI no significa publicar el sistema en internet. CI se enfoca en integrar cambios de código con frecuencia y validarlos automáticamente.
 
-### Actividad 2: Comprensión del Problema y del Modelo de Datos
+La idea principal es evitar que cada desarrollador trabaje aislado durante mucho tiempo y que al final todos intenten juntar el código en una integración gigante. Los cambios pequeños son más fáciles de revisar, integrar y corregir.
 
-#### A. Planteamiento del Problema
+En integración continua, el equipo trabaja sobre un repositorio central. Los desarrolladores realizan commits regularmente. Cada cambio puede activar una compilación automática. El sistema toma el código actualizado e intenta construirlo.
 
-La universidad requiere una API para gestionar solicitudes de servicios en laboratorios. Una persona podrá crear un ticket seleccionando el laboratorio y el tipo de servicio requerido. El responsable técnico del laboratorio deberá recibir la solicitud, asignarla a un auxiliar o técnico especializado, revisar el avance y finalizar el ticket cuando el servicio haya sido atendido.
+La compilación debe ser automatizada y rápida. El equipo no debería esperar días para saber si el código funciona. El sistema debe responder pronto si el proyecto compila o si hay errores.
 
-El sistema debe controlar el acceso mediante autenticación con JWT y autorización basada en scopes, de modo que cada usuario solo pueda ejecutar las acciones permitidas según su rol.
+Además, una buena práctica de CI incluye pruebas automáticas. No basta con decir que el proyecto arranca. También se deben ejecutar pruebas para validar partes importantes del sistema.
 
-#### B. Roles del Sistema
+Si la construcción falla, la prioridad debe ser corregirla. En CI, una compilación rota afecta a todo el equipo porque el repositorio principal deja de ser una base confiable.
 
-| Rol | Descripción |
-|---|---|
-| `solicitante` | Crea tickets y consulta sus propias solicitudes. |
-| `responsable_tecnico` | Recibe, asigna y finaliza tickets. |
-| `auxiliar` | Atiende tickets asignados a él; actualiza el estado según el flujo permitido. |
-| `tecnico_especializado` | Igual que auxiliar; atiende tickets de mayor complejidad técnica. |
-| `admin` | Acceso total al sistema. Puede ver y gestionar cualquier recurso. |
+Los resultados de compilación deben ser visibles para todos. El equipo debe saber si el proyecto está en buen estado o si hay errores. Esto puede verse en herramientas como GitHub Actions, GitLab CI, Jenkins, Azure DevOps u otras plataformas.
 
-#### C. Scopes del Sistema
+En el caso del sistema de gestión de calidad, CI sería que cada vez que un desarrollador suba un cambio al backend FastAPI o al frontend React, se ejecute automáticamente una validación: instalar dependencias, correr pruebas, revisar errores y confirmar si el proyecto sigue construyendo correctamente.
 
-Los scopes representan los permisos concretos que se incluyen en el payload del token JWT. Cada rol recibe un conjunto predefinido de scopes al iniciar sesión. La siguiente tabla debe servir como referencia para la implementación de toda la lógica de autorización.
+El cambio importante es detectar errores temprano, no al final.
 
-| Scope | Descripción | Roles que lo poseen |
-|---|---|---|
-| `tickets:crear` | Crear nuevos tickets | solicitante, admin |
-| `tickets:ver_propios` | Ver los tickets propios (como solicitante o asignado) | solicitante, auxiliar, tecnico_especializado, responsable_tecnico, admin |
-| `tickets:recibir` | Cambiar estado de `solicitado` a `recibido` | responsable_tecnico, admin |
-| `tickets:asignar` | Asignar ticket a un auxiliar o técnico | responsable_tecnico, admin |
-| `tickets:atender` | Cambiar estado a `en_proceso` o `en_revision` | auxiliar, tecnico_especializado, admin |
-| `tickets:finalizar` | Cambiar estado a `terminado` | responsable_tecnico, admin |
-| `tickets:ver_todos` | Ver todos los tickets del sistema | admin |
-| `usuarios:gestionar` | Crear, listar y consultar usuarios | admin |
+## Integración continua frente a integración tradicional
 
-#### D. Flujo de Estados del Ticket
+La integración continua cambia varios aspectos del modelo tradicional.
 
-El estado de un ticket sigue un flujo estrictamente controlado. Solo se permiten las transiciones indicadas. Cualquier intento de transición fuera de esta tabla debe ser rechazado.
+Primero, la integración pasa a ser automatizada y rápida. Antes podía tomar mucho tiempo y esfuerzo porque se hacía manualmente o al final de una etapa larga. Con CI, cada cambio puede activar una validación automática.
 
-| Estado actual | Estado siguiente | Quién puede realizar la transición | Scope requerido |
-|---|---|---|---|
-| `solicitado` | `recibido` | responsable_tecnico, admin | `tickets:recibir` |
-| `recibido` | `asignado` | responsable_tecnico, admin | `tickets:asignar` |
-| `asignado` | `en_proceso` | auxiliar o tecnico_especializado **asignado al ticket**, admin | `tickets:atender` |
-| `en_proceso` | `en_revision` | auxiliar o tecnico_especializado **asignado al ticket**, admin | `tickets:atender` |
-| `en_revision` | `terminado` | responsable_tecnico, admin | `tickets:finalizar` |
+Segundo, los problemas se reportan a tiempo. En el modelo tradicional, los errores se descubrían al final de la iteración. Con CI, los problemas aparecen cerca del momento en que se generaron, lo que facilita encontrar la causa.
 
-#### E. Modelo de Datos
+Tercero, los problemas tienen prioridad para los desarrolladores. Si la construcción falla, no se deja para después. Se corrige rápido porque una base rota afecta a todo el equipo.
 
-El sistema se desarrollará a partir de cuatro tablas principales.
+Cuarto, los ciclos de feedback son más cortos. El equipo recibe notificaciones inmediatas cuando algo falla. Esto reduce el tiempo entre cometer un error y corregirlo.
 
-##### Tabla `usuarios`
+El resultado es una iteración más corta y un menor tiempo para entregar valor. La integración continua permite pasar de una integración pesada, manual y tardía a una integración frecuente, repetible y visible.
 
-Almacena la información de las personas que interactúan con el sistema.
+## Servidor de compilación
 
-| Campo | Tipo | Descripción |
-|---|---|---|
-| `id_usuario` | Integer (PK) | Identificador único |
-| `nombre` | String | Nombre completo |
-| `correo` | String (unique) | Correo electrónico — usado para iniciar sesión |
-| `password_hash` | String | Contraseña almacenada como hash bcrypt |
-| `rol` | String | Uno de los roles definidos en la sección B |
-| `activo` | Boolean | Indica si el usuario puede iniciar sesión |
+Antes de hablar de entrega continua completa, es útil entender el papel del servidor de compilación.
 
-##### Tabla `laboratorios`
+Un servidor de compilación recibe cambios desde uno o varios módulos del sistema y ejecuta tareas automáticas. En un proyecto real, esos módulos pueden ser perfil del cliente, catálogo de producto o rastreo de orden. En el sistema de gestión de calidad, podrían ser personal, laboratorios, equipos, evidencias, reportes o solicitudes.
 
-| Campo | Tipo | Descripción |
-|---|---|---|
-| `id_laboratorio` | Integer (PK) | Identificador único |
-| `nombre` | String | Nombre del laboratorio |
-| `ubicacion` | String | Ubicación física |
-| `activo` | Boolean | Indica si está operativo |
+El servidor toma el código desde Git, normalmente desde una rama principal o estable. Luego ejecuta la compilación, genera un paquete y puede ejecutar pruebas automatizadas.
 
-##### Tabla `servicios`
+En un backend FastAPI, esto puede incluir instalar dependencias, revisar que el proyecto arranque, ejecutar pruebas y validar estructura. En un frontend React, puede incluir instalar paquetes, construir el proyecto con Vite y generar los archivos finales.
 
-| Campo | Tipo | Descripción |
-|---|---|---|
-| `id_servicio` | Integer (PK) | Identificador único |
-| `nombre` | String | Nombre del servicio |
-| `descripcion` | String | Descripción del tipo de soporte |
-| `activo` | Boolean | Indica si está disponible |
+El servidor también puede ejecutar pruebas unitarias automatizadas y pruebas de interfaz de usuario automatizadas. Esto representa un avance importante frente a un proceso completamente manual.
 
-##### Tabla `tickets`
+Sin embargo, todavía falta un punto clave: que el paquete generado pueda avanzar hacia entornos reales de manera controlada y repetible. Aquí empieza a aparecer la necesidad de entrega continua.
 
-| Campo | Tipo | Descripción |
-|---|---|---|
-| `id_ticket` | Integer (PK) | Identificador único |
-| `id_solicitante` | FK → usuarios | Quien crea el ticket |
-| `id_laboratorio` | FK → laboratorios | Laboratorio donde se requiere el servicio |
-| `id_servicio` | FK → servicios | Tipo de servicio solicitado |
-| `id_responsable` | FK → usuarios (nullable) | Responsable técnico que gestiona el ticket |
-| `id_asignado` | FK → usuarios (nullable) | Auxiliar o técnico asignado para ejecutar |
-| `titulo` | String | Título breve de la solicitud |
-| `descripcion` | String | Descripción detallada del problema |
-| `estado` | String | Estado actual según el flujo definido |
-| `prioridad` | String | baja / media / alta |
-| `observacion_responsable` | String (nullable) | Comentario del responsable técnico |
-| `observacion_tecnico` | String (nullable) | Comentario del técnico asignado |
-| `fecha_creacion` | DateTime | Timestamp de creación |
-| `fecha_actualizacion` | DateTime | Timestamp de última modificación |
-| `fecha_finalizacion` | DateTime (nullable) | Timestamp de cierre |
+## Operaciones y paquetes con instrucciones
 
-**Relaciones principales:**
+En la vieja escuela, cuando el servidor genera un paquete, el equipo de desarrollo suele entregarlo al equipo de operaciones junto con instrucciones.
 
-- `usuarios` 1:N `tickets` (como solicitante)
-- `usuarios` 1:N `tickets` (como responsable)
-- `usuarios` 1:N `tickets` (como asignado)
-- `laboratorios` 1:N `tickets`
-- `servicios` 1:N `tickets`
+El paquete puede contener archivos de la aplicación, configuraciones, dependencias, scripts parciales o una versión construida del sistema. Las instrucciones pueden indicar cómo copiar archivos, instalar parches, configurar variables de entorno o diferenciar entre ambiente de pruebas y producción.
 
----
+Por ejemplo, para un entorno de prueba se pueden usar variables como:
 
-### Actividad 3: Configuración de la Base de Datos y Modelos
-
-**Propósito:** Configurar la conexión con PostgreSQL y desarrollar la estructura base de la API mediante modelos SQLAlchemy, esquemas Pydantic y endpoints iniciales.
-
-**Descripción:** El equipo deberá crear las tablas del sistema dentro del schema de PostgreSQL asignado por el docente, configurar la conexión desde FastAPI y desarrollar los componentes iniciales para gestionar usuarios, laboratorios, servicios y tickets.
-
-> **Nota:** No deben crearse tablas en el schema `public` ni en otro que no haya sido asignado.
-
-**Acciones a realizar:**
-
-1. Configurar la conexión a PostgreSQL usando la variable `DATABASE_URL` definida en el `.env`.
-2. Crear los modelos SQLAlchemy para las cuatro tablas.
-3. Definir claves primarias, claves foráneas y relaciones entre las tablas.
-4. Crear los esquemas Pydantic para validar datos de entrada y salida.
-5. Implementar endpoints base para crear, listar y consultar registros.
-6. Verificar el funcionamiento desde Swagger.
-
-**Endpoints mínimos:**
-
-```
-POST   /usuarios/
-GET    /usuarios/
-GET    /usuarios/{id_usuario}
-
-POST   /laboratorios/
-GET    /laboratorios/
-GET    /laboratorios/{id_laboratorio}
-
-POST   /servicios/
-GET    /servicios/
-GET    /servicios/{id_servicio}
-
-POST   /tickets/
-GET    /tickets/
-GET    /tickets/{id_ticket}
-PATCH  /tickets/{id_ticket}/estado
+```text
+env=test
+db=mockdb
+url=test.electronica.com
 ```
 
----
+Para producción se pueden usar otros valores:
 
-### Actividad 4: Autenticación con JWT y Gestión de Usuarios
+```text
+env=prod
+db=productdb
+url=electronica.com
+```
 
-**Propósito:** Implementar el inicio de sesión de usuarios y la generación de tokens JWT para proteger el acceso a la API.
+El problema es que este enfoque depende demasiado de que una persona lea, interprete y ejecute correctamente cada paso.
 
-**Descripción:** Los usuarios registrados deberán iniciar sesión con su correo y contraseña. Si las credenciales son válidas, la API genera un token JWT que el cliente envía en las solicitudes protegidas.
+Si operaciones copia un archivo en la carpeta equivocada, usa una variable incorrecta, instala un parche diferente o mezcla valores de prueba con valores de producción, el despliegue puede fallar.
 
-**Acciones a realizar:**
+En un sistema de gestión de calidad, esto puede significar que una versión apunte a la base de datos equivocada, que se carguen configuraciones incompletas o que un módulo funcione en pruebas pero falle en producción.
 
-1. Agregar almacenamiento seguro de contraseñas usando hash bcrypt.
-2. Implementar el endpoint de inicio de sesión `POST /auth/token`.
-3. Validar las credenciales del usuario contra la base de datos.
-4. Generar un token JWT que incluya como mínimo en el payload:
-   - `sub`: correo del usuario
-   - `id_usuario`: identificador
-   - `rol`: rol del usuario
-   - `scopes`: lista de scopes correspondientes al rol (ver tabla de la Actividad 2)
-   - `exp`: tiempo de expiración
-5. Crear una dependencia para obtener el usuario autenticado a partir del token.
-6. Proteger al menos un endpoint usando autenticación JWT.
+El conocimiento del despliegue existe, pero está escrito como instrucciones manuales. No necesariamente está automatizado ni versionado dentro del flujo técnico.
 
-**Probar desde Swagger el flujo completo:**
+## Puntos débiles de las instrucciones manuales
 
-1. Crear usuario mediante `POST /usuarios/`.
-2. Iniciar sesión mediante `POST /auth/token` con correo y contraseña.
-3. Copiar el `access_token` de la respuesta.
-4. Hacer clic en el botón **Authorize** en Swagger e ingresar `Bearer <token>`.
-5. Consultar un endpoint protegido y verificar que responde correctamente.
-6. Intentar acceder sin token y verificar que la respuesta es `HTTP 401`.
+El primer problema de las instrucciones manuales es su exactitud. Si una instrucción está incompleta, mal escrita o desactualizada, operaciones puede ejecutar un paso incorrecto. El software cambia, pero los documentos no siempre se actualizan al mismo ritmo.
 
-**Producto esperado:** El sistema permite autenticar usuarios mediante correo y contraseña, genera un token JWT válido con los scopes del rol y protege endpoints que solo puedan ser accedidos por usuarios autenticados.
+El segundo problema es la diferencia entre instrucciones para distintos entornos. No es lo mismo desplegar en pruebas que en producción. Cambian variables, bases de datos, URLs, permisos, certificados y servicios. Si alguien mezcla valores, el sistema puede quedar apuntando al entorno incorrecto.
 
----
+El tercer problema es la naturaleza propensa a errores por tareas manuales. Copiar archivos, cambiar variables, ejecutar comandos y reiniciar servicios manualmente siempre introduce riesgo. Una letra mal escrita en una variable de entorno puede tumbar un despliegue.
 
-### Actividad 5: Autorización con Scopes y Reglas de Acceso
+El cuarto problema es el impacto en tiempo de inactividad. Cuando el despliegue es complejo y manual, toma más tiempo. Mientras más tiempo tome, mayor es la posibilidad de que el sistema esté caído o funcionando parcialmente.
 
-**Propósito:** Proteger los endpoints según los scopes requeridos y aplicar reglas de negocio adicionales basadas en la relación del usuario con el ticket.
+La solución no es eliminar a operaciones ni a calidad. La solución es quitar tareas repetitivas, reducir errores manuales y automatizar los pasos que siempre se ejecutan de la misma forma.
 
-**Descripción:** No basta con que el usuario esté autenticado. Cada endpoint debe validar dos condiciones de forma independiente:
+## De instrucciones a scripts
 
-1. **Verificación de scope:** el token del usuario debe incluir el scope requerido por el endpoint. Si no lo tiene, la API responde con `HTTP 403`.
-2. **Verificación de regla de negocio:** incluso con el scope correcto, el usuario debe cumplir la condición de negocio asociada a la acción (por ejemplo, que solo el técnico asignado pueda cambiar el estado de su propio ticket, o que el responsable solo pueda finalizar tickets en estado `en_revision`).
+El siguiente paso lógico es convertir instrucciones manuales en scripts.
 
-Para implementar esto, se debe crear una dependencia que use `SecurityScopes` de FastAPI, de modo que cada endpoint declare explícitamente qué scopes requiere. Esta dependencia debe extraer los scopes del payload del token y compararlos con los requeridos antes de permitir el acceso.
+Un script es un archivo con comandos que automatiza tareas. En lugar de pedirle a una persona que copie archivos, el script ejecuta la copia. En lugar de pedirle que configure variables, el script las define. En lugar de pedirle que instale dependencias, el script ejecuta esos comandos.
 
-**Acciones a realizar:**
+Por ejemplo, si antes una instrucción decía copiar archivos `.properties` a una carpeta `etc/config`, ahora un script puede ejecutar ese paso automáticamente.
 
-1. Implementar la dependencia de verificación de scopes usando `SecurityScopes`.
-2. Actualizar todos los endpoints de tickets para declarar el scope que requieren.
-3. Implementar la lógica de validación de transiciones de estado según la tabla de la Actividad 2.
-4. Implementar la validación de relación usuario-ticket: para cambios de estado a `en_proceso` y `en_revision`, verificar que `id_asignado` coincide con el usuario autenticado.
-5. Implementar la validación de visibilidad: un solicitante solo puede ver sus propios tickets; un responsable y un asignado pueden ver los tickets en los que participan; el admin puede ver todos.
-6. Probar todos los casos de la tabla de evidencias.
+Si antes había instrucciones diferentes para pruebas y producción, el script puede recibir un parámetro y seleccionar la configuración correcta según el entorno.
 
-> **Criterio clave:** No basta con que el endpoint funcione para el caso positivo. Deben demostrarse dos condiciones:
-> 1. Que el usuario **sin scope** recibe `HTTP 403`.
-> 2. Que el usuario **con scope** también debe cumplir la regla de negocio. Ejemplo: un responsable técnico tiene el scope `tickets:finalizar`, pero no debe poder pasar un ticket directamente de `solicitado` a `terminado`.
+Esto reduce errores porque el procedimiento se ejecuta siempre de la misma forma. El conocimiento del despliegue deja de estar únicamente en un documento y comienza a expresarse como código.
 
-**Evidencias de funcionamiento requeridas:**
+## Pipelines
 
-El equipo debe realizar las siguientes pruebas con usuarios de diferentes roles y registrar los resultados con capturas de pantalla:
+A partir de los scripts aparece el concepto de pipeline.
 
-| # | Usuario | Acción | Resultado esperado |
-|---|---|---|---|
-| 1 | solicitante | Crear ticket | Permitido (200) |
-| 2 | solicitante | Asignar ticket | Denegado (403) |
-| 3 | responsable_tecnico | Recibir ticket (`solicitado` → `recibido`) | Permitido |
-| 4 | responsable_tecnico | Asignar ticket (`recibido` → `asignado`) | Permitido |
-| 5 | auxiliar | Cambiar ticket a `en_proceso` | Permitido solo si está asignado a él |
-| 6 | auxiliar | Finalizar ticket como `terminado` | Denegado (403) |
-| 7 | tecnico_especializado | Cambiar ticket a `en_revision` | Permitido solo si está asignado a él |
-| 8 | responsable_tecnico | Finalizar ticket (`en_revision` → `terminado`) | Permitido |
-| 9 | solicitante | Ver tickets de otros usuarios | Denegado (403) |
-| 10 | admin | Ver todos los tickets | Permitido |
+Un pipeline es un flujo de trabajo automatizado compuesto por etapas. Cada etapa ejecuta una tarea específica y normalmente el resultado de una etapa alimenta la siguiente.
 
----
+Un pipeline puede compilar el código, ejecutar pruebas, empaquetar la aplicación, preparar el entorno, desplegar en pruebas, validar resultados y dejar una versión lista para producción.
 
-### Actividad 6: Trabajo Colaborativo
+En integración continua, el pipeline valida que el código compile y pase pruebas. En entrega continua, el pipeline va más allá: también prepara paquetes, ambientes y despliegues para que la versión pueda liberarse cuando se decida.
 
-El equipo deberá evidenciar el trabajo colaborativo mediante el uso de Git y GitHub.
+En el sistema de gestión de calidad, un pipeline podría tomar el código desde Git, construir el backend FastAPI, construir el frontend React, ejecutar pruebas, crear una imagen Docker, subirla a un registro, desplegarla en un entorno de prueba y notificar al equipo de calidad para validar.
 
-**Requisitos mínimos:**
+La idea es que las tareas repetitivas no dependan de copiar y pegar comandos a mano. Si una tarea se repite y siempre debe hacerse igual, debe vivir en un script o en un pipeline.
 
-- Cada integrante debe tener commits identificables con mensajes descriptivos.
-- El historial del repositorio debe reflejar la participación de todos los miembros del equipo.
-- El README del repositorio debe incluir la descripción del aporte de cada integrante.
+## Entrega continua
 
----
+La entrega continua, conocida como CD por sus siglas en inglés, es una práctica de desarrollo de software donde el sistema puede lanzarse a producción en cualquier momento.
 
-## 7. Resultado Esperado del Taller
+La palabra clave es puede. No significa que cada cambio se publique automáticamente. Significa que el software está en un estado suficientemente preparado, probado y controlado para ser liberado cuando el equipo lo decida.
 
-Al finalizar el taller, cada equipo deberá entregar una API funcional desarrollada con FastAPI y PostgreSQL para gestionar tickets de servicios en laboratorios universitarios.
+La entrega continua no elimina el control. Al contrario, busca que el proceso sea tan confiable que publicar deje de ser un evento traumático.
 
-La API debe:
+El objetivo es que el software esté siempre listo para producción. No se trata de tener una versión que casi compila, casi funciona o solo necesita algunos ajustes manuales. La versión debe pasar por validaciones suficientes para ser considerada liberable.
 
-- Implementar autenticación mediante JWT con hashing bcrypt de contraseñas.
-- Generar tokens con los scopes del rol del usuario autenticado.
-- Proteger endpoints según los scopes definidos en la tabla de la Actividad 2.
-- Controlar el flujo de estados del ticket según la tabla de transiciones de la Actividad 2.
-- Permitir crear usuarios, laboratorios, servicios y tickets.
-- Asignar tickets a auxiliares o técnicos especializados.
-- Finalizar tickets únicamente por parte del responsable técnico o administrador.
-- Rechazar con `HTTP 403` cualquier acción para la que el usuario no tenga el scope requerido.
-- Rechazar con `HTTP 403` o `HTTP 422` las transiciones de estado no permitidas.
+El requisito principal para la entrega continua es la integración continua. No se puede hablar de entrega continua si primero no existe un proceso confiable para integrar, compilar y probar el código.
 
-La entrega debe incluir el código fuente en el repositorio, la base de datos configurada en el schema asignado, los modelos SQLAlchemy, los esquemas Pydantic, los endpoints funcionales y las evidencias de prueba en Swagger o herramienta equivalente.
+El resultado de la entrega continua es la generación frecuente de paquetes de lanzamiento. El equipo puede entregar mejoras pequeñas, correcciones urgentes o nuevas funcionalidades con menor riesgo y mayor frecuencia.
 
----
+En el caso del sistema de gestión de calidad, entrega continua significa que una mejora en el módulo de personal, reportes o evidencias no queda esperando instrucciones manuales indefinidamente. El flujo la deja preparada para liberarse de manera controlada.
 
-## 8. Parámetros para Elaboración del Informe
+## Operaciones tradicionales frente a entrega continua
 
-El informe del taller deberá presentarse en formato **README.md** dentro del repositorio del proyecto en GitHub. No se aceptarán informes en formatos externos (PDF, Word, etc.). Toda la documentación debe estar incluida dentro del repositorio.
+Cuando se comparan las operaciones tradicionales con la entrega continua, se observan mejoras claras.
 
-### Contenido del README.md
+La exactitud de las instrucciones mejora porque los scripts automatizados pueden verificarse en tiempo de creación. Ya no dependen únicamente de un documento interpretado por una persona.
 
-#### 1. Información General
+La diferencia entre instrucciones de instalación para distintos entornos se gestiona mejor porque los scripts y pipelines pueden seleccionar tareas y variables según el ambiente: prueba, preproducción o producción.
 
-- Nombre del proyecto.
-- Integrantes del equipo.
-- Asignatura.
-- Fecha.
+La automatización reduce errores manuales. Copiar archivos, cambiar variables y ejecutar comandos a mano deja de ser el centro del proceso.
 
-#### 2. Descripción del Sistema
+Los despliegues sofisticados se vuelven más repetibles. Un despliegue automatizado es más fácil de ejecutar varias veces, más fácil de auditar y más fácil de corregir.
 
-- Descripción general del sistema desarrollado.
-- Entidades implementadas: Usuarios, Laboratorios, Servicios y Tickets.
-- Descripción de la arquitectura utilizada.
+Esto no significa que la automatización elimine todos los problemas. Significa que reduce la variabilidad humana en tareas repetitivas y hace que el proceso sea más confiable.
 
-#### 3. Configuración del Entorno
+## Integración continua y entrega continua como flujo completo
 
-- Creación y activación del entorno virtual.
-- Instalación de dependencias.
-- Uso del archivo `requirements.txt`.
-- Configuración del archivo `.env` (describir las variables necesarias sin incluir valores reales).
+Cuando se integran CI y CD, se obtiene una visión completa del flujo de trabajo.
 
-#### 4. Configuración de la Base de Datos
+La integración continua reduce el riesgo técnico del código. Cada cambio se integra, se compila y se prueba lo antes posible. La entrega continua reduce el riesgo operativo del despliegue. El software no solo se construye, sino que queda preparado para llegar a un entorno real.
 
-- Descripción de la conexión a PostgreSQL.
-- Schema asignado (sin incluir credenciales sensibles).
+Juntas, estas prácticas permiten que el software avance desde el desarrollo hasta entornos de prueba o producción de manera más controlada.
 
-#### 5. Endpoints Implementados
+El pipeline se convierte en la columna vertebral del proceso. No es solo una herramienta que ejecuta comandos. Representa la forma en que el equipo entrega software.
 
-Listado completo de endpoints con: método HTTP, ruta, descripción, scope requerido y rol(es) autorizados.
+## Implementación continua
 
-#### 6. Evidencias de Funcionamiento
+La implementación continua, o Continuous Deployment, es un paso adicional.
 
-**Autenticación con JWT:**
+En entrega continua, el sistema queda listo para publicarse, pero una persona o el equipo decide cuándo liberar.
 
-- Login exitoso con token generado.
-- Uso del botón Authorize en Swagger con Bearer Token.
-- Consulta de endpoint protegido con token válido.
-- Intento de acceso sin token recibiendo `HTTP 401`.
+En implementación continua, si el cambio pasa todas las validaciones definidas, el sistema puede desplegarse automáticamente.
 
-**Autorización con scopes:**
+Esto exige confianza en el proceso, pero no confianza ciega. Esa confianza se construye con pruebas, reglas, controles, validaciones y buenas prácticas.
 
-- Usuario con scope ejecutando acción permitida (captura de pantalla con respuesta HTTP).
-- Usuario sin scope recibiendo error `HTTP 403` (captura de pantalla con respuesta HTTP).
-- Ejemplo de endpoint protegido por scope.
+La idea no es publicar sin pensar. La idea es quitar el paso manual final cuando ya no aporta valor.
 
-**Reglas de negocio del ticket:**
+En un sistema de gestión de calidad, la implementación continua podría aplicarse primero en ambientes de prueba o preproducción. Para producción se podría conservar una aprobación formal, especialmente si el sistema maneja procesos sensibles.
 
-- Ticket creado en estado `solicitado`.
-- Responsable técnico recibe el ticket (`solicitado` → `recibido`).
-- Responsable técnico asigna el ticket a un auxiliar o técnico.
-- Auxiliar o técnico cambia estado a `en_proceso`.
-- Auxiliar o técnico cambia estado a `en_revision`.
-- Responsable técnico finaliza el ticket (`en_revision` → `terminado`).
+La implementación continua no significa publicar a lo loco. Significa automatizar la liberación cuando el proceso ya demostró que el cambio es seguro.
 
-**Evidencia de restricciones:**
+## Cierre de la clase
 
-- Solicitante intentando asignar un ticket → error.
-- Auxiliar intentando finalizar un ticket → error.
-- Usuario intentando modificar un ticket no asignado a él → error.
-- Responsable intentando finalizar un ticket que no está en `en_revision` → error.
+La clase muestra una evolución clara.
 
-#### 7. Control de Versiones
+Primero se parte del desarrollo tradicional, donde los equipos trabajan por etapas separadas y muchas validaciones ocurren tarde.
 
-- Enlace al repositorio en GitHub.
-- Evidencia de commits realizados por cada integrante.
-- Descripción breve del aporte de cada miembro.
+Luego se identifican los puntos débiles: integración manual, problemas de fusión, iteraciones largas, feedback tardío, instrucciones propensas a errores y despliegues lentos.
 
-#### 8. Conclusiones
+Después aparece la integración continua, que permite validar el código temprano y con frecuencia.
 
-- Principales aprendizajes.
-- Dificultades encontradas.
-- Soluciones aplicadas.
+Luego aparece la entrega continua, que convierte el software construido en una versión lista para ser liberada mediante procesos repetibles.
 
-> **Nota:** El README debe permitir que cualquier persona pueda clonar el repositorio y ejecutar el proyecto sin necesidad de información adicional fuera del archivo.
+Finalmente se introduce la implementación continua, donde el despliegue puede automatizarse si todas las validaciones se cumplen.
 
-### Requisitos del Repositorio
+La idea central no es usar herramientas por moda. La idea es mejorar el flujo de trabajo para que el software pueda evolucionar con menos riesgo, menos tareas manuales y mayor capacidad de respuesta.
 
-El repositorio debe:
-
-- Contener el código fuente completo organizado según la arquitectura trabajada en clase.
-- Incluir el archivo `README.md` correctamente estructurado.
-- Incluir el archivo `requirements.txt`.
-- Incluir el archivo `.gitignore`.
-- No incluir el archivo `.env` con credenciales reales.
-
----
-
-## 9. Disposición de Residuos
-
-La actividad descrita en esta guía no genera residuos físicos o químicos. En consecuencia, no se requiere un procedimiento específico de disposición de residuos para esta práctica.
-
----
-
-## 10. Bibliografía
-
-- FastAPI. (2024). *FastAPI Documentation*. https://fastapi.tiangolo.com
-- FastAPI. (2024). *OAuth2 with scopes*. https://fastapi.tiangolo.com/advanced/security/oauth2-scopes/
-- Pydantic. (2024). *Pydantic Documentation*. https://docs.pydantic.dev
-- Python Software Foundation. (2024). *Python Documentation*. https://docs.python.org
-- python-jose. (2024). *Python JOSE Documentation*. https://python-jose.readthedocs.io
-- passlib. (2024). *Passlib Documentation*. https://passlib.readthedocs.io
-- Chacon, S., & Straub, B. (2014). *Pro Git*. Apress.
-- Fielding, R. (2000). *Architectural Styles and the Design of Network-based Software Architectures*. University of California, Irvine.
-
+DevOps no comienza instalando una herramienta. Comienza entendiendo dónde se rompe el proceso y qué partes deben automatizarse, medirse y mejorarse.
