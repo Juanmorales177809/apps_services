@@ -1,273 +1,1245 @@
-# Clase: DevOps, Integración Continua, Entrega Continua e Implementación Continua
+# Deployt
 
-## Contexto general de la clase
+Este documento acompaña la práctica final de la clase de Aplicaciones y Servicios Web. El objetivo es desplegar una API desarrollada con FastAPI, una base de datos PostgreSQL y pgAdmin usando Docker Compose en un servidor Linux.
 
-Esta clase parte de un caso cercano: el desarrollo de un software para la gestión de calidad del ITM. La idea no es comenzar con definiciones aisladas, sino entender cómo un equipo real trabaja alrededor de un sistema que debe evolucionar constantemente.
+La práctica sigue este flujo:
 
-En este escenario intervienen dos actores principales. Por un lado está el personal de calidad, que conoce los procesos, los formatos, los requisitos, las auditorías, los registros, las evidencias y las necesidades reales del sistema. Por otro lado está el equipo de desarrollo, encargado de convertir esas necesidades en funcionalidades concretas: pantallas, formularios, bases de datos, validaciones, reportes, permisos, carga de archivos y flujos de trabajo.
+1. Repasar comandos básicos de Linux.
+2. Acceder a un servidor por SSH.
+3. Instalar Docker y Docker Compose.
+4. Crear la estructura del proyecto.
+5. Crear el Dockerfile del backend FastAPI.
+6. Crear el archivo docker-compose.yml.
+7. Levantar los servicios.
+8. Verificar contenedores, puertos y logs.
+9. Probar FastAPI, PostgreSQL y pgAdmin.
+10. Preparar el repositorio para GitHub.
 
-El personal de calidad identifica necesidades o problemas. El equipo de desarrollo analiza esas solicitudes, implementa cambios, prueba el sistema y entrega nuevas versiones. En apariencia, este flujo parece simple, pero cuando el software crece aparecen problemas de comunicación, integración, pruebas, despliegue y retroalimentación.
+---
 
-Por ejemplo, el personal de calidad puede solicitar que el sistema permita registrar evidencias de capacitación para cada persona del laboratorio. El equipo de desarrollo debe traducir esa necesidad en una solución técnica: crear o ajustar tablas en la base de datos, construir endpoints en el backend, diseñar formularios en el frontend, validar campos, controlar permisos y permitir adjuntar archivos.
+## 1. Comandos básicos de Linux antes de comenzar
 
-El problema aparece cuando estas entregas se manejan de manera manual, tardía o desorganizada. Si los requerimientos llegan incompletos, desarrollo puede construir algo que no cumple con lo esperado. Si desarrollo entrega tarde o sin pruebas suficientes, calidad detecta errores al final. Si operaciones recibe paquetes con instrucciones manuales, cada despliegue se vuelve una tarea lenta y riesgosa.
+Antes de instalar Docker o crear archivos, es importante manejar algunos comandos básicos de terminal.
 
-A partir de este caso se construye toda la clase: primero se analiza el flujo tradicional, luego se identifican sus puntos débiles, y finalmente se introducen los conceptos de integración continua, entrega continua e implementación continua.
+### Ver la ubicación actual
 
-## Flujo de trabajo tradicional
-
-En un flujo tradicional de desarrollo de software, el proceso suele avanzar por etapas separadas.
-
-Primero está el equipo de desarrollo de software. Este equipo recibe requerimientos, escribe código, modifica funcionalidades y prepara los cambios. Luego esos cambios se guardan en Git, que funciona como repositorio central del código. Git permite versionar, registrar cambios y conocer quién modificó qué parte del sistema.
-
-Después aparece el equipo de integración. En un modelo tradicional, la integración no siempre ocurre de manera frecuente. Muchas veces cada desarrollador trabaja por su lado y, después de cierto tiempo, alguien debe juntar todos los cambios. En ese momento aparecen conflictos, errores de dependencias, diferencias entre versiones, funcionalidades que se pisan entre sí o cambios que funcionan individualmente pero fallan al combinarse.
-
-Luego viene la compilación. En esta etapa se toma el código integrado y se intenta construir una versión funcional del sistema. En un proyecto web puede significar instalar dependencias, construir el frontend, preparar el backend, validar que el proyecto arranque correctamente o generar archivos finales.
-
-Si la compilación falla, el equipo debe devolverse para encontrar la causa. El problema es que, si la integración se hizo tarde y con muchos cambios acumulados, no siempre es fácil identificar qué cambio produjo el fallo.
-
-Después viene el empaquetado. Aquí se prepara una versión del sistema para ser entregada o instalada. El paquete puede ser una carpeta de build, un archivo comprimido, un instalador, una imagen Docker o un conjunto de archivos listos para ser desplegados.
-
-El punto crítico es que, en el flujo tradicional, muchas validaciones importantes ocurren tarde. Primero se desarrolla, luego se integra, luego se compila, luego se empaqueta y solo después se detecta si algo quedó mal. Esto hace que los errores sean más costosos de corregir.
-
-En el caso del software de gestión de calidad, esto sería como esperar varias semanas para juntar cambios del módulo de personal, laboratorios, evidencias, permisos y reportes, y apenas al final intentar construir una versión completa. Si algo falla, el equipo pierde tiempo tratando de ubicar el origen del problema.
-
-## Entrega y despliegue tradicional
-
-Después del empaquetado comienza otra parte del proceso: llevar el paquete a un entorno donde pueda probarse o utilizarse.
-
-En el modelo tradicional, el equipo de desarrollo no entrega únicamente el software. También entrega instrucciones. Estas instrucciones pueden indicar qué archivos copiar, qué variables configurar, qué dependencias instalar, qué comandos ejecutar, qué servicios reiniciar o qué rutas modificar.
-
-El equipo de operaciones recibe ese paquete y las instrucciones asociadas. Su responsabilidad es preparar el servidor, instalar la aplicación, configurar el entorno y dejar el sistema funcionando.
-
-Luego el sistema se instala en un entorno de prueba. Este no es el sitio público final, sino un espacio controlado donde se revisa si la aplicación carga, si el backend responde, si la base de datos está disponible, si las rutas funcionan y si los cambios no dañaron funcionalidades existentes.
-
-Después interviene el equipo de garantía de calidad. Este equipo revisa que lo entregado cumpla con lo solicitado. En el caso del sistema de gestión de calidad, puede validar si un formulario guarda correctamente, si una evidencia se carga, si los permisos funcionan, si el registro queda asociado a la persona correcta o si un reporte muestra la información esperada.
-
-Finalmente, si todo está correcto, el sistema se publica en el sitio web público. Allí los usuarios finales acceden a la versión liberada.
-
-El problema es que este flujo tiene mucha transferencia manual entre equipos. Desarrollo entrega a operaciones, operaciones despliega, calidad valida y solo después se publica. Cada paso implica espera, comunicación, instrucciones y riesgo de error.
-
-Si algo falla en el entorno de prueba, hay que devolverse al equipo de desarrollo, corregir, volver a compilar, volver a empaquetar, volver a entregar y volver a probar. Este ciclo puede ser lento, especialmente cuando el sistema crece.
-
-## Iteración en el desarrollo de software
-
-El proceso no termina cuando el sitio web queda publicado. Cuando los usuarios empiezan a utilizar el sistema, aparecen nuevos hallazgos: errores, mejoras, ajustes de proceso o nuevas necesidades.
-
-Por eso se habla de iteración. El software no se construye una sola vez y se abandona. El software evoluciona. Cada entrega genera retroalimentación, y esa retroalimentación alimenta una nueva versión.
-
-En el caso del sistema de gestión de calidad, el personal puede encontrar que falta un campo, que una validación debe cambiar, que un reporte no filtra correctamente, que un permiso no está bien definido o que un proceso debe ajustarse. Esos hallazgos regresan al equipo de desarrollo y el ciclo comienza de nuevo.
-
-El problema del enfoque tradicional es que cada iteración puede ser pesada. Si cada cambio debe pasar manualmente por integración, compilación, empaquetado, operaciones, pruebas, validación y publicación, entonces mejorar el sistema toma demasiado tiempo.
-
-La necesidad es pasar de un ciclo manual, lento y frágil a un ciclo más automatizado, frecuente y confiable.
-
-## Puntos débiles del modelo tradicional
-
-El primer punto débil es la integración. En un flujo tradicional, integrar suele tomar mucho tiempo y esfuerzo porque muchas veces se hace tarde y de forma manual. Cuando varios desarrolladores trabajan en partes diferentes del sistema, los conflictos aparecen al juntar el código.
-
-Un cambio puede funcionar bien de forma aislada, pero fallar al mezclarse con otros módulos. Por ejemplo, un desarrollador modifica el formulario de personal, otro cambia la estructura de la base de datos y otro ajusta permisos. Al integrar, pueden aparecer errores por variables renombradas, rutas inexistentes, migraciones incompletas o dependencias incompatibles.
-
-El segundo punto débil son los problemas de fusión intermedia. Si al unir cambios aparece un conflicto o un error importante, el equipo puede detenerse hasta resolverlo. Esto atrasa el proceso y genera dependencia entre personas o áreas.
-
-El tercer punto son las iteraciones largas. Cuando el ciclo de desarrollo, integración, pruebas y entrega toma mucho tiempo, la retroalimentación llega tarde. Los problemas pequeños se acumulan y terminan convirtiéndose en problemas grandes.
-
-Otro punto crítico es que la solución de problemas ocurre al final de la iteración. En el modelo tradicional, muchos defectos se descubren cuando el sistema ya fue integrado, empaquetado o incluso desplegado en pruebas. Corregir tarde es más costoso que corregir temprano.
-
-También aparece un ciclo largo de feedback para defectos funcionales. Un defecto funcional ocurre cuando el sistema técnicamente funciona, pero no hace exactamente lo que el usuario necesita. Por ejemplo, un formulario guarda datos, pero no guarda la evidencia correcta. Un reporte se genera, pero no filtra por laboratorio. Una pantalla permite crear un registro, pero no valida un campo obligatorio.
-
-En un proceso tradicional, estos defectos suelen descubrirse demasiado tarde.
-
-La conclusión es que el problema no es únicamente técnico. Es un problema de proceso. Si la integración es manual, los errores se descubren tarde, las iteraciones son largas y el feedback demora, el equipo termina gastando más tiempo corrigiendo fallos acumulados que entregando valor.
-
-## Integración continua
-
-La integración continua, conocida como CI por sus siglas en inglés, busca resolver los problemas asociados a la integración tardía.
-
-CI no significa desplegar en producción. CI no significa publicar el sistema en internet. CI se enfoca en integrar cambios de código con frecuencia y validarlos automáticamente.
-
-La idea principal es evitar que cada desarrollador trabaje aislado durante mucho tiempo y que al final todos intenten juntar el código en una integración gigante. Los cambios pequeños son más fáciles de revisar, integrar y corregir.
-
-En integración continua, el equipo trabaja sobre un repositorio central. Los desarrolladores realizan commits regularmente. Cada cambio puede activar una compilación automática. El sistema toma el código actualizado e intenta construirlo.
-
-La compilación debe ser automatizada y rápida. El equipo no debería esperar días para saber si el código funciona. El sistema debe responder pronto si el proyecto compila o si hay errores.
-
-Además, una buena práctica de CI incluye pruebas automáticas. No basta con decir que el proyecto arranca. También se deben ejecutar pruebas para validar partes importantes del sistema.
-
-Si la construcción falla, la prioridad debe ser corregirla. En CI, una compilación rota afecta a todo el equipo porque el repositorio principal deja de ser una base confiable.
-
-Los resultados de compilación deben ser visibles para todos. El equipo debe saber si el proyecto está en buen estado o si hay errores. Esto puede verse en herramientas como GitHub Actions, GitLab CI, Jenkins, Azure DevOps u otras plataformas.
-
-En el caso del sistema de gestión de calidad, CI sería que cada vez que un desarrollador suba un cambio al backend FastAPI o al frontend React, se ejecute automáticamente una validación: instalar dependencias, correr pruebas, revisar errores y confirmar si el proyecto sigue construyendo correctamente.
-
-El cambio importante es detectar errores temprano, no al final.
-
-## Integración continua frente a integración tradicional
-
-La integración continua cambia varios aspectos del modelo tradicional.
-
-Primero, la integración pasa a ser automatizada y rápida. Antes podía tomar mucho tiempo y esfuerzo porque se hacía manualmente o al final de una etapa larga. Con CI, cada cambio puede activar una validación automática.
-
-Segundo, los problemas se reportan a tiempo. En el modelo tradicional, los errores se descubrían al final de la iteración. Con CI, los problemas aparecen cerca del momento en que se generaron, lo que facilita encontrar la causa.
-
-Tercero, los problemas tienen prioridad para los desarrolladores. Si la construcción falla, no se deja para después. Se corrige rápido porque una base rota afecta a todo el equipo.
-
-Cuarto, los ciclos de feedback son más cortos. El equipo recibe notificaciones inmediatas cuando algo falla. Esto reduce el tiempo entre cometer un error y corregirlo.
-
-El resultado es una iteración más corta y un menor tiempo para entregar valor. La integración continua permite pasar de una integración pesada, manual y tardía a una integración frecuente, repetible y visible.
-
-## Servidor de compilación
-
-Antes de hablar de entrega continua completa, es útil entender el papel del servidor de compilación.
-
-Un servidor de compilación recibe cambios desde uno o varios módulos del sistema y ejecuta tareas automáticas. En un proyecto real, esos módulos pueden ser perfil del cliente, catálogo de producto o rastreo de orden. En el sistema de gestión de calidad, podrían ser personal, laboratorios, equipos, evidencias, reportes o solicitudes.
-
-El servidor toma el código desde Git, normalmente desde una rama principal o estable. Luego ejecuta la compilación, genera un paquete y puede ejecutar pruebas automatizadas.
-
-En un backend FastAPI, esto puede incluir instalar dependencias, revisar que el proyecto arranque, ejecutar pruebas y validar estructura. En un frontend React, puede incluir instalar paquetes, construir el proyecto con Vite y generar los archivos finales.
-
-El servidor también puede ejecutar pruebas unitarias automatizadas y pruebas de interfaz de usuario automatizadas. Esto representa un avance importante frente a un proceso completamente manual.
-
-Sin embargo, todavía falta un punto clave: que el paquete generado pueda avanzar hacia entornos reales de manera controlada y repetible. Aquí empieza a aparecer la necesidad de entrega continua.
-
-## Operaciones y paquetes con instrucciones
-
-En la vieja escuela, cuando el servidor genera un paquete, el equipo de desarrollo suele entregarlo al equipo de operaciones junto con instrucciones.
-
-El paquete puede contener archivos de la aplicación, configuraciones, dependencias, scripts parciales o una versión construida del sistema. Las instrucciones pueden indicar cómo copiar archivos, instalar parches, configurar variables de entorno o diferenciar entre ambiente de pruebas y producción.
-
-Por ejemplo, para un entorno de prueba se pueden usar variables como:
-
-```text
-env=test
-db=mockdb
-url=test.electronica.com
+```bash
+pwd
 ```
 
-Para producción se pueden usar otros valores:
+Muestra la carpeta donde estamos ubicados.
 
-```text
-env=prod
-db=productdb
-url=electronica.com
+### Listar archivos y carpetas
+
+```bash
+ls
 ```
 
-El problema es que este enfoque depende demasiado de que una persona lea, interprete y ejecute correctamente cada paso.
+Lista el contenido de la carpeta actual.
 
-Si operaciones copia un archivo en la carpeta equivocada, usa una variable incorrecta, instala un parche diferente o mezcla valores de prueba con valores de producción, el despliegue puede fallar.
+```bash
+ls -la
+```
 
-En un sistema de gestión de calidad, esto puede significar que una versión apunte a la base de datos equivocada, que se carguen configuraciones incompletas o que un módulo funcione en pruebas pero falle en producción.
+Muestra archivos visibles, ocultos, permisos, propietarios y fechas.
 
-El conocimiento del despliegue existe, pero está escrito como instrucciones manuales. No necesariamente está automatizado ni versionado dentro del flujo técnico.
+### Cambiar de carpeta
 
-## Puntos débiles de las instrucciones manuales
+```bash
+cd nombre_carpeta
+```
 
-El primer problema de las instrucciones manuales es su exactitud. Si una instrucción está incompleta, mal escrita o desactualizada, operaciones puede ejecutar un paso incorrecto. El software cambia, pero los documentos no siempre se actualizan al mismo ritmo.
+Ejemplo:
 
-El segundo problema es la diferencia entre instrucciones para distintos entornos. No es lo mismo desplegar en pruebas que en producción. Cambian variables, bases de datos, URLs, permisos, certificados y servicios. Si alguien mezcla valores, el sistema puede quedar apuntando al entorno incorrecto.
+```bash
+cd proyectos
+```
 
-El tercer problema es la naturaleza propensa a errores por tareas manuales. Copiar archivos, cambiar variables, ejecutar comandos y reiniciar servicios manualmente siempre introduce riesgo. Una letra mal escrita en una variable de entorno puede tumbar un despliegue.
+Volver a la carpeta anterior:
 
-El cuarto problema es el impacto en tiempo de inactividad. Cuando el despliegue es complejo y manual, toma más tiempo. Mientras más tiempo tome, mayor es la posibilidad de que el sistema esté caído o funcionando parcialmente.
+```bash
+cd ..
+```
 
-La solución no es eliminar a operaciones ni a calidad. La solución es quitar tareas repetitivas, reducir errores manuales y automatizar los pasos que siempre se ejecutan de la misma forma.
+Ir al directorio personal del usuario:
 
-## De instrucciones a scripts
+```bash
+cd ~
+```
 
-El siguiente paso lógico es convertir instrucciones manuales en scripts.
+### Crear una carpeta
 
-Un script es un archivo con comandos que automatiza tareas. En lugar de pedirle a una persona que copie archivos, el script ejecuta la copia. En lugar de pedirle que configure variables, el script las define. En lugar de pedirle que instale dependencias, el script ejecuta esos comandos.
+```bash
+mkdir nombre_carpeta
+```
 
-Por ejemplo, si antes una instrucción decía copiar archivos `.properties` a una carpeta `etc/config`, ahora un script puede ejecutar ese paso automáticamente.
+Ejemplo:
 
-Si antes había instrucciones diferentes para pruebas y producción, el script puede recibir un parámetro y seleccionar la configuración correcta según el entorno.
+```bash
+mkdir clase-despliegue
+```
 
-Esto reduce errores porque el procedimiento se ejecuta siempre de la misma forma. El conocimiento del despliegue deja de estar únicamente en un documento y comienza a expresarse como código.
+### Crear varias carpetas
 
-## Pipelines
+```bash
+mkdir -p backend/app
+```
 
-A partir de los scripts aparece el concepto de pipeline.
+El parámetro `-p` permite crear carpetas anidadas.
 
-Un pipeline es un flujo de trabajo automatizado compuesto por etapas. Cada etapa ejecuta una tarea específica y normalmente el resultado de una etapa alimenta la siguiente.
+### Crear un archivo con nano
 
-Un pipeline puede compilar el código, ejecutar pruebas, empaquetar la aplicación, preparar el entorno, desplegar en pruebas, validar resultados y dejar una versión lista para producción.
+```bash
+nano nombre_archivo
+```
 
-En integración continua, el pipeline valida que el código compile y pase pruebas. En entrega continua, el pipeline va más allá: también prepara paquetes, ambientes y despliegues para que la versión pueda liberarse cuando se decida.
+Ejemplo:
 
-En el sistema de gestión de calidad, un pipeline podría tomar el código desde Git, construir el backend FastAPI, construir el frontend React, ejecutar pruebas, crear una imagen Docker, subirla a un registro, desplegarla en un entorno de prueba y notificar al equipo de calidad para validar.
+```bash
+nano docker-compose.yml
+```
 
-La idea es que las tareas repetitivas no dependan de copiar y pegar comandos a mano. Si una tarea se repite y siempre debe hacerse igual, debe vivir en un script o en un pipeline.
+Para guardar en nano:
 
-## Entrega continua
+```text
+CTRL + O
+Enter
+CTRL + X
+```
 
-La entrega continua, conocida como CD por sus siglas en inglés, es una práctica de desarrollo de software donde el sistema puede lanzarse a producción en cualquier momento.
+### Ver el contenido de un archivo
 
-La palabra clave es puede. No significa que cada cambio se publique automáticamente. Significa que el software está en un estado suficientemente preparado, probado y controlado para ser liberado cuando el equipo lo decida.
+```bash
+cat nombre_archivo
+```
 
-La entrega continua no elimina el control. Al contrario, busca que el proceso sea tan confiable que publicar deje de ser un evento traumático.
+Ejemplo:
 
-El objetivo es que el software esté siempre listo para producción. No se trata de tener una versión que casi compila, casi funciona o solo necesita algunos ajustes manuales. La versión debe pasar por validaciones suficientes para ser considerada liberable.
+```bash
+cat docker-compose.yml
+```
 
-El requisito principal para la entrega continua es la integración continua. No se puede hablar de entrega continua si primero no existe un proceso confiable para integrar, compilar y probar el código.
+### Copiar archivos
 
-El resultado de la entrega continua es la generación frecuente de paquetes de lanzamiento. El equipo puede entregar mejoras pequeñas, correcciones urgentes o nuevas funcionalidades con menor riesgo y mayor frecuencia.
+```bash
+cp archivo_origen archivo_destino
+```
 
-En el caso del sistema de gestión de calidad, entrega continua significa que una mejora en el módulo de personal, reportes o evidencias no queda esperando instrucciones manuales indefinidamente. El flujo la deja preparada para liberarse de manera controlada.
+Ejemplo:
 
-## Operaciones tradicionales frente a entrega continua
+```bash
+cp .env.example .env
+```
 
-Cuando se comparan las operaciones tradicionales con la entrega continua, se observan mejoras claras.
+### Eliminar archivos
 
-La exactitud de las instrucciones mejora porque los scripts automatizados pueden verificarse en tiempo de creación. Ya no dependen únicamente de un documento interpretado por una persona.
+```bash
+rm nombre_archivo
+```
 
-La diferencia entre instrucciones de instalación para distintos entornos se gestiona mejor porque los scripts y pipelines pueden seleccionar tareas y variables según el ambiente: prueba, preproducción o producción.
+### Eliminar carpetas
 
-La automatización reduce errores manuales. Copiar archivos, cambiar variables y ejecutar comandos a mano deja de ser el centro del proceso.
+```bash
+rm -r nombre_carpeta
+```
 
-Los despliegues sofisticados se vuelven más repetibles. Un despliegue automatizado es más fácil de ejecutar varias veces, más fácil de auditar y más fácil de corregir.
+### Limpiar la terminal
 
-Esto no significa que la automatización elimine todos los problemas. Significa que reduce la variabilidad humana en tareas repetitivas y hace que el proceso sea más confiable.
+```bash
+clear
+```
 
-## Integración continua y entrega continua como flujo completo
+### Ejecutar comandos con permisos de administrador
 
-Cuando se integran CI y CD, se obtiene una visión completa del flujo de trabajo.
+```bash
+sudo comando
+```
 
-La integración continua reduce el riesgo técnico del código. Cada cambio se integra, se compila y se prueba lo antes posible. La entrega continua reduce el riesgo operativo del despliegue. El software no solo se construye, sino que queda preparado para llegar a un entorno real.
+Ejemplo:
 
-Juntas, estas prácticas permiten que el software avance desde el desarrollo hasta entornos de prueba o producción de manera más controlada.
+```bash
+sudo apt update
+```
 
-El pipeline se convierte en la columna vertebral del proceso. No es solo una herramienta que ejecuta comandos. Representa la forma en que el equipo entrega software.
+---
 
-## Implementación continua
+## 2. Acceso al servidor por SSH
 
-La implementación continua, o Continuous Deployment, es un paso adicional.
+Para trabajar en un servidor Linux remoto se usa SSH.
 
-En entrega continua, el sistema queda listo para publicarse, pero una persona o el equipo decide cuándo liberar.
+La estructura general del comando es:
 
-En implementación continua, si el cambio pasa todas las validaciones definidas, el sistema puede desplegarse automáticamente.
+```bash
+ssh usuario@ip_del_servidor
+```
 
-Esto exige confianza en el proceso, pero no confianza ciega. Esa confianza se construye con pruebas, reglas, controles, validaciones y buenas prácticas.
+Ejemplo:
 
-La idea no es publicar sin pensar. La idea es quitar el paso manual final cuando ya no aporta valor.
+```bash
+ssh usuario@192.168.1.50
+```
 
-En un sistema de gestión de calidad, la implementación continua podría aplicarse primero en ambientes de prueba o preproducción. Para producción se podría conservar una aprobación formal, especialmente si el sistema maneja procesos sensibles.
+Si el servidor usa un puerto diferente al 22:
 
-La implementación continua no significa publicar a lo loco. Significa automatizar la liberación cuando el proceso ya demostró que el cambio es seguro.
+```bash
+ssh usuario@ip_del_servidor -p puerto
+```
 
-## Cierre de la clase
+Ejemplo:
 
-La clase muestra una evolución clara.
+```bash
+ssh usuario@192.168.1.50 -p 2222
+```
 
-Primero se parte del desarrollo tradicional, donde los equipos trabajan por etapas separadas y muchas validaciones ocurren tarde.
+Después de ingresar al servidor, se recomienda verificar:
 
-Luego se identifican los puntos débiles: integración manual, problemas de fusión, iteraciones largas, feedback tardío, instrucciones propensas a errores y despliegues lentos.
+```bash
+pwd
+```
 
-Después aparece la integración continua, que permite validar el código temprano y con frecuencia.
+```bash
+ls -la
+```
 
-Luego aparece la entrega continua, que convierte el software construido en una versión lista para ser liberada mediante procesos repetibles.
+También es buena práctica actualizar la lista de paquetes:
 
-Finalmente se introduce la implementación continua, donde el despliegue puede automatizarse si todas las validaciones se cumplen.
+```bash
+sudo apt update
+```
 
-La idea central no es usar herramientas por moda. La idea es mejorar el flujo de trabajo para que el software pueda evolucionar con menos riesgo, menos tareas manuales y mayor capacidad de respuesta.
+---
 
-DevOps no comienza instalando una herramienta. Comienza entendiendo dónde se rompe el proceso y qué partes deben automatizarse, medirse y mejorarse.
+## 3. Preparar una carpeta de trabajo
+
+Crear una carpeta para la práctica:
+
+```bash
+mkdir -p ~/clase-despliegue
+```
+
+Entrar a la carpeta:
+
+```bash
+cd ~/clase-despliegue
+```
+
+Verificar ubicación:
+
+```bash
+pwd
+```
+
+---
+
+## 4. Instalación de Docker en Ubuntu Server
+
+Primero se actualiza el sistema de paquetes:
+
+```bash
+sudo apt update
+```
+
+Instalar paquetes necesarios para usar repositorios por HTTPS:
+
+```bash
+sudo apt install -y ca-certificates curl gnupg
+```
+
+Crear la carpeta para las llaves de paquetes:
+
+```bash
+sudo install -m 0755 -d /etc/apt/keyrings
+```
+
+Descargar la llave oficial de Docker:
+
+```bash
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+```
+
+Asignar permisos de lectura:
+
+```bash
+sudo chmod a+r /etc/apt/keyrings/docker.gpg
+```
+
+Agregar el repositorio de Docker:
+
+```bash
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+```
+
+Actualizar nuevamente los paquetes:
+
+```bash
+sudo apt update
+```
+
+Instalar Docker Engine, CLI, containerd y Docker Compose como plugin:
+
+```bash
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+```
+
+Verificar Docker:
+
+```bash
+docker --version
+```
+
+Verificar Docker Compose:
+
+```bash
+docker compose version
+```
+
+Probar Docker con un contenedor de prueba:
+
+```bash
+sudo docker run hello-world
+```
+
+---
+
+## 5. Usar Docker sin escribir sudo
+
+Agregar el usuario actual al grupo `docker`:
+
+```bash
+sudo usermod -aG docker $USER
+```
+
+Aplicar el cambio de grupo en la sesión actual:
+
+```bash
+newgrp docker
+```
+
+Probar nuevamente:
+
+```bash
+docker run hello-world
+```
+
+---
+
+## 6. Crear la estructura del proyecto
+
+Desde la carpeta de trabajo:
+
+```bash
+cd ~/clase-despliegue
+```
+
+Crear la estructura:
+
+```bash
+mkdir -p backend/app
+```
+
+Verificar:
+
+```bash
+ls -la
+```
+
+La estructura esperada será:
+
+```text
+clase-despliegue/
+├── backend/
+│   ├── app/
+│   │   └── main.py
+│   ├── requirements.txt
+│   └── Dockerfile
+├── docker-compose.yml
+├── .env.example
+├── .gitignore
+└── README.md
+```
+
+---
+
+## 7. Crear la aplicación FastAPI
+
+Crear el archivo principal:
+
+```bash
+nano backend/app/main.py
+```
+
+Pegar el siguiente contenido:
+
+```python
+from fastapi import FastAPI
+import os
+
+app = FastAPI(
+    title="API desplegada con Docker Compose",
+    version="1.0.0"
+)
+
+@app.get("/")
+def inicio():
+    return {
+        "mensaje": "API funcionando correctamente",
+        "servicio": "FastAPI",
+        "estado": "activo"
+    }
+
+@app.get("/health")
+def health_check():
+    return {
+        "status": "ok"
+    }
+
+@app.get("/config")
+def mostrar_configuracion():
+    return {
+        "database_url": os.getenv("DATABASE_URL", "No configurada")
+    }
+```
+
+Guardar el archivo con:
+
+```text
+CTRL + O
+Enter
+CTRL + X
+```
+
+---
+
+## 8. Crear el archivo requirements.txt
+
+Crear el archivo:
+
+```bash
+nano backend/requirements.txt
+```
+
+Agregar:
+
+```text
+fastapi
+uvicorn[standard]
+sqlalchemy
+psycopg2-binary
+python-dotenv
+```
+
+Guardar y salir.
+
+---
+
+## 9. Crear el Dockerfile para FastAPI
+
+Crear el archivo:
+
+```bash
+nano backend/Dockerfile
+```
+
+Agregar el siguiente contenido:
+
+```dockerfile
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+Guardar y salir.
+
+### Explicación del Dockerfile
+
+`FROM python:3.12-slim` define la imagen base.
+
+`WORKDIR /app` define la carpeta de trabajo dentro del contenedor.
+
+`COPY requirements.txt .` copia el archivo de dependencias.
+
+`RUN pip install --no-cache-dir -r requirements.txt` instala las dependencias.
+
+`COPY . .` copia el código del backend dentro del contenedor.
+
+`CMD [...]` ejecuta la API usando Uvicorn.
+
+El parámetro `--host 0.0.0.0` permite que la API sea accesible desde fuera del contenedor.
+
+---
+
+## 10. Crear el archivo docker-compose.yml
+
+Crear el archivo en la raíz del proyecto:
+
+```bash
+nano docker-compose.yml
+```
+
+Agregar el siguiente contenido:
+
+```yaml
+services:
+  db:
+    image: postgres:16
+    container_name: clase_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: appdb
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: clase_fastapi
+    restart: always
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/appdb
+    ports:
+      - "8000:8000"
+    networks:
+      - app_network
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: clase_pgadmin
+    restart: always
+    depends_on:
+      - db
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - app_network
+
+volumes:
+  postgres_data:
+  pgadmin_data:
+
+networks:
+  app_network:
+    driver: bridge
+```
+
+Guardar y salir.
+
+---
+
+## 11. Explicación del docker-compose.yml
+
+### Servicio db
+
+`image: postgres:16` crea un contenedor usando PostgreSQL 16.
+
+`container_name: clase_postgres` define un nombre claro para el contenedor.
+
+`POSTGRES_USER`, `POSTGRES_PASSWORD` y `POSTGRES_DB` definen el usuario, la contraseña y la base de datos inicial.
+
+```yaml
+ports:
+  - "5433:5432"
+```
+
+El puerto interno de PostgreSQL es `5432`. En la máquina se publica como `5433`.
+
+```yaml
+volumes:
+  - postgres_data:/var/lib/postgresql/data
+```
+
+Guarda los datos de PostgreSQL en un volumen persistente.
+
+### Servicio backend
+
+```yaml
+build:
+  context: ./backend
+  dockerfile: Dockerfile
+```
+
+Construye la imagen del backend usando el Dockerfile ubicado en la carpeta `backend`.
+
+```yaml
+depends_on:
+  - db
+```
+
+Indica que el backend depende del servicio `db`.
+
+```yaml
+DATABASE_URL: postgresql://postgres:postgres@db:5432/appdb
+```
+
+Define la URL de conexión a la base de datos.
+
+El host es `db`, no `localhost`.
+
+Dentro de Docker Compose, los servicios se comunican usando el nombre del servicio. Por eso el backend se conecta a PostgreSQL usando:
+
+```text
+db:5432
+```
+
+### Servicio pgAdmin
+
+`image: dpage/pgadmin4:latest` crea un contenedor con pgAdmin.
+
+```yaml
+ports:
+  - "5050:80"
+```
+
+Permite acceder a pgAdmin desde el navegador usando el puerto `5050`.
+
+```yaml
+volumes:
+  - pgadmin_data:/var/lib/pgadmin
+```
+
+Permite conservar la configuración de pgAdmin.
+
+---
+
+## 12. Crear archivo .env.example
+
+Aunque en esta práctica las variables están dentro del `docker-compose.yml`, es conveniente mostrar cómo se documentan.
+
+Crear archivo:
+
+```bash
+nano .env.example
+```
+
+Agregar:
+
+```env
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB=appdb
+DATABASE_URL=postgresql://postgres:postgres@db:5432/appdb
+PGADMIN_DEFAULT_EMAIL=admin@admin.com
+PGADMIN_DEFAULT_PASSWORD=admin
+```
+
+Guardar y salir.
+
+---
+
+## 13. Crear archivo .gitignore
+
+Crear archivo:
+
+```bash
+nano .gitignore
+```
+
+Agregar:
+
+```gitignore
+.env
+__pycache__/
+*.pyc
+venv/
+.env.local
+.DS_Store
+```
+
+Guardar y salir.
+
+---
+
+## 14. Levantar los servicios
+
+Desde la raíz del proyecto:
+
+```bash
+cd ~/clase-despliegue
+```
+
+Levantar todos los servicios:
+
+```bash
+docker compose up -d --build
+```
+
+Explicación:
+
+`docker compose` ejecuta Docker Compose.
+
+`up` levanta los servicios definidos.
+
+`-d` ejecuta los contenedores en segundo plano.
+
+`--build` reconstruye la imagen del backend si hubo cambios en el Dockerfile o en el código.
+
+---
+
+## 15. Verificar contenedores
+
+Ver contenedores activos:
+
+```bash
+docker ps
+```
+
+Se deberían ver tres contenedores:
+
+```text
+clase_postgres
+clase_fastapi
+clase_pgadmin
+```
+
+Ver todos los contenedores, incluso detenidos:
+
+```bash
+docker ps -a
+```
+
+---
+
+## 16. Verificar logs
+
+Ver logs generales del proyecto:
+
+```bash
+docker compose logs
+```
+
+Ver logs del backend:
+
+```bash
+docker compose logs backend
+```
+
+Ver logs de PostgreSQL:
+
+```bash
+docker compose logs db
+```
+
+Ver logs de pgAdmin:
+
+```bash
+docker compose logs pgadmin
+```
+
+Seguir los logs en tiempo real:
+
+```bash
+docker compose logs -f
+```
+
+O solo los logs del backend en tiempo real:
+
+```bash
+docker compose logs -f backend
+```
+
+---
+
+## 17. Probar la API FastAPI
+
+En el navegador:
+
+```text
+http://IP_DEL_SERVIDOR:8000
+```
+
+Si se está trabajando en la misma máquina:
+
+```text
+http://localhost:8000
+```
+
+Documentación Swagger:
+
+```text
+http://IP_DEL_SERVIDOR:8000/docs
+```
+
+Endpoint de verificación:
+
+```text
+http://IP_DEL_SERVIDOR:8000/health
+```
+
+Endpoint de configuración:
+
+```text
+http://IP_DEL_SERVIDOR:8000/config
+```
+
+---
+
+## 18. Probar pgAdmin
+
+Abrir en el navegador:
+
+```text
+http://IP_DEL_SERVIDOR:5050
+```
+
+Si se está trabajando en la misma máquina:
+
+```text
+http://localhost:5050
+```
+
+Ingresar con los datos definidos en el `docker-compose.yml`:
+
+```text
+Email: admin@admin.com
+Password: admin
+```
+
+---
+
+## 19. Registrar PostgreSQL en pgAdmin
+
+Dentro de pgAdmin, crear un nuevo servidor.
+
+### General
+
+```text
+Name: clase_postgres
+```
+
+### Connection
+
+```text
+Host name/address: db
+Port: 5432
+Maintenance database: appdb
+Username: postgres
+Password: postgres
+```
+
+El host debe ser:
+
+```text
+db
+```
+
+No se usa `localhost` porque pgAdmin está dentro de otro contenedor. En la red de Docker Compose, PostgreSQL se encuentra usando el nombre del servicio `db`.
+
+---
+
+## 20. Verificar puertos publicados
+
+Ver los contenedores y sus puertos:
+
+```bash
+docker ps
+```
+
+También se puede usar:
+
+```bash
+docker compose ps
+```
+
+Los puertos esperados son:
+
+```text
+FastAPI: 8000:8000
+PostgreSQL: 5433:5432
+pgAdmin: 5050:80
+```
+
+Interpretación:
+
+`8000:8000` significa puerto externo 8000 y puerto interno 8000.
+
+`5433:5432` significa puerto externo 5433 y puerto interno 5432.
+
+`5050:80` significa puerto externo 5050 y puerto interno 80.
+
+---
+
+## 21. Entrar a un contenedor
+
+Entrar al contenedor del backend:
+
+```bash
+docker exec -it clase_fastapi bash
+```
+
+Salir del contenedor:
+
+```bash
+exit
+```
+
+Entrar al contenedor de PostgreSQL:
+
+```bash
+docker exec -it clase_postgres bash
+```
+
+Entrar a PostgreSQL desde el contenedor:
+
+```bash
+psql -U postgres -d appdb
+```
+
+Listar bases de datos:
+
+```sql
+\l
+```
+
+Listar tablas:
+
+```sql
+\dt
+```
+
+Salir de PostgreSQL:
+
+```sql
+\q
+```
+
+Salir del contenedor:
+
+```bash
+exit
+```
+
+---
+
+## 22. Reiniciar servicios
+
+Reiniciar todos los servicios:
+
+```bash
+docker compose restart
+```
+
+Reiniciar solo el backend:
+
+```bash
+docker compose restart backend
+```
+
+---
+
+## 23. Apagar los servicios
+
+Detener los servicios sin eliminar volúmenes:
+
+```bash
+docker compose down
+```
+
+Esto elimina los contenedores, pero conserva los datos de PostgreSQL y pgAdmin en los volúmenes.
+
+---
+
+## 24. Apagar y borrar datos persistentes
+
+```bash
+docker compose down -v
+```
+
+El parámetro `-v` elimina también los volúmenes.
+
+Al usar este comando, se eliminan los datos guardados en PostgreSQL y la configuración de pgAdmin.
+
+---
+
+## 25. Reconstruir después de cambios
+
+Si se modifica el código del backend o el Dockerfile:
+
+```bash
+docker compose up -d --build
+```
+
+Si el problema persiste, se puede bajar todo y volver a levantar:
+
+```bash
+docker compose down
+docker compose up -d --build
+```
+
+---
+
+## 26. Errores frecuentes
+
+### Error: el backend no conecta con PostgreSQL
+
+Revisar la variable:
+
+```text
+DATABASE_URL=postgresql://postgres:postgres@db:5432/appdb
+```
+
+El host debe ser:
+
+```text
+db
+```
+
+No debe ser:
+
+```text
+localhost
+```
+
+Dentro de un contenedor, `localhost` apunta al mismo contenedor, no a otro servicio.
+
+### Error: el puerto ya está ocupado
+
+Ejemplo:
+
+```text
+Bind for 0.0.0.0:8000 failed: port is already allocated
+```
+
+Solución: cambiar el puerto externo.
+
+Ejemplo:
+
+```yaml
+ports:
+  - "8001:8000"
+```
+
+Luego la API se consulta por:
+
+```text
+http://IP_DEL_SERVIDOR:8001
+```
+
+### Error: el contenedor se detiene
+
+Revisar logs:
+
+```bash
+docker compose logs backend
+```
+
+O:
+
+```bash
+docker compose logs db
+```
+
+### Error: pgAdmin no conecta con PostgreSQL
+
+Revisar que en pgAdmin se use:
+
+```text
+Host name/address: db
+Port: 5432
+```
+
+---
+
+## 27. Comandos principales de Docker para la práctica
+
+Ver versión de Docker:
+
+```bash
+docker --version
+```
+
+Ver versión de Docker Compose:
+
+```bash
+docker compose version
+```
+
+Levantar servicios:
+
+```bash
+docker compose up -d --build
+```
+
+Ver contenedores activos:
+
+```bash
+docker ps
+```
+
+Ver servicios del Compose:
+
+```bash
+docker compose ps
+```
+
+Ver logs:
+
+```bash
+docker compose logs
+```
+
+Ver logs en tiempo real:
+
+```bash
+docker compose logs -f
+```
+
+Reiniciar servicios:
+
+```bash
+docker compose restart
+```
+
+Apagar servicios:
+
+```bash
+docker compose down
+```
+
+Apagar y borrar volúmenes:
+
+```bash
+docker compose down -v
+```
+
+Eliminar imágenes sin uso:
+
+```bash
+docker image prune
+```
+
+Eliminar contenedores detenidos:
+
+```bash
+docker container prune
+```
+
+Ver redes:
+
+```bash
+docker network ls
+```
+
+Ver volúmenes:
+
+```bash
+docker volume ls
+```
+
+---
+
+## 28. Preparar el repositorio en GitHub
+
+Inicializar Git:
+
+```bash
+git init
+```
+
+Agregar archivos:
+
+```bash
+git add .
+```
+
+Crear commit:
+
+```bash
+git commit -m "Despliegue inicial con FastAPI PostgreSQL y pgAdmin"
+```
+
+Configurar rama principal:
+
+```bash
+git branch -M main
+```
+
+Agregar repositorio remoto:
+
+```bash
+git remote add origin URL_DEL_REPOSITORIO
+```
+
+Subir al repositorio:
+
+```bash
+git push -u origin main
+```
+
+---
+
+## 29. Flujo completo de la práctica
+
+La práctica completa puede resumirse así:
+
+```text
+1. Entrar al servidor por SSH.
+2. Repasar comandos básicos de Linux.
+3. Instalar Docker y Docker Compose.
+4. Crear la estructura del proyecto.
+5. Crear main.py de FastAPI.
+6. Crear requirements.txt.
+7. Crear Dockerfile del backend.
+8. Crear docker-compose.yml.
+9. Levantar servicios con docker compose up -d --build.
+10. Verificar contenedores con docker ps.
+11. Revisar logs con docker compose logs.
+12. Probar FastAPI en el navegador.
+13. Probar pgAdmin.
+14. Registrar PostgreSQL en pgAdmin usando el host db.
+15. Subir el proyecto a GitHub.
+```
+
+---
+
+## 30. Resultado esperado
+
+Al finalizar, el proyecto debe tener tres servicios funcionando:
+
+```text
+FastAPI      http://IP_DEL_SERVIDOR:8000
+Swagger      http://IP_DEL_SERVIDOR:8000/docs
+pgAdmin      http://IP_DEL_SERVIDOR:5050
+PostgreSQL   db:5432 dentro de Docker
+PostgreSQL   IP_DEL_SERVIDOR:5433 desde fuera del contenedor
+```
+
+La estructura final del proyecto debe quedar así:
+
+```text
+clase-despliegue/
+├── backend/
+│   ├── app/
+│   │   └── main.py
+│   ├── requirements.txt
+│   └── Dockerfile
+├── docker-compose.yml
+├── .env.example
+├── .gitignore
+└── README.md
+```
+
+El punto clave de la clase es entender que Docker Compose permite levantar varios servicios conectados con una sola configuración. La API, la base de datos y pgAdmin no son elementos aislados: forman parte de una misma arquitectura desplegada.
