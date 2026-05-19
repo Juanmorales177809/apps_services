@@ -1,1245 +1,408 @@
-# Deployt
+# 🧪 Laboratorio 4 — Laboratorio Integrador de Aplicaciones y Servicios Web
 
-Este documento acompaña la práctica final de la clase de Aplicaciones y Servicios Web. El objetivo es desplegar una API desarrollada con FastAPI, una base de datos PostgreSQL y pgAdmin usando Docker Compose en un servidor Linux.
-
-La práctica sigue este flujo:
-
-1. Repasar comandos básicos de Linux.
-2. Acceder a un servidor por SSH.
-3. Instalar Docker y Docker Compose.
-4. Crear la estructura del proyecto.
-5. Crear el Dockerfile del backend FastAPI.
-6. Crear el archivo docker-compose.yml.
-7. Levantar los servicios.
-8. Verificar contenedores, puertos y logs.
-9. Probar FastAPI, PostgreSQL y pgAdmin.
-10. Preparar el repositorio para GitHub.
+> **Asignatura:** Aplicaciones y Servicios Web  
+> **Programa:** Tecnología en Desarrollo de Software  
+> **Laboratorio:** DevOps  
+> **Código de guía:** 004  
+> **Tiempo estimado:** 20 días  
+> **Elaborado por:** Juan Carlos Morales Guerra — v001 · 19-05-2026
 
 ---
 
-## 1. Comandos básicos de Linux antes de comenzar
+## Competencias, Contenido e Indicador de Logro
 
-Antes de instalar Docker o crear archivos, es importante manejar algunos comandos básicos de terminal.
-
-### Ver la ubicación actual
-
-```bash
-pwd
-```
-
-Muestra la carpeta donde estamos ubicados.
-
-### Listar archivos y carpetas
-
-```bash
-ls
-```
-
-Lista el contenido de la carpeta actual.
-
-```bash
-ls -la
-```
-
-Muestra archivos visibles, ocultos, permisos, propietarios y fechas.
-
-### Cambiar de carpeta
-
-```bash
-cd nombre_carpeta
-```
-
-Ejemplo:
-
-```bash
-cd proyectos
-```
-
-Volver a la carpeta anterior:
-
-```bash
-cd ..
-```
-
-Ir al directorio personal del usuario:
-
-```bash
-cd ~
-```
-
-### Crear una carpeta
-
-```bash
-mkdir nombre_carpeta
-```
-
-Ejemplo:
-
-```bash
-mkdir clase-despliegue
-```
-
-### Crear varias carpetas
-
-```bash
-mkdir -p backend/app
-```
-
-El parámetro `-p` permite crear carpetas anidadas.
-
-### Crear un archivo con nano
-
-```bash
-nano nombre_archivo
-```
-
-Ejemplo:
-
-```bash
-nano docker-compose.yml
-```
-
-Para guardar en nano:
-
-```text
-CTRL + O
-Enter
-CTRL + X
-```
-
-### Ver el contenido de un archivo
-
-```bash
-cat nombre_archivo
-```
-
-Ejemplo:
-
-```bash
-cat docker-compose.yml
-```
-
-### Copiar archivos
-
-```bash
-cp archivo_origen archivo_destino
-```
-
-Ejemplo:
-
-```bash
-cp .env.example .env
-```
-
-### Eliminar archivos
-
-```bash
-rm nombre_archivo
-```
-
-### Eliminar carpetas
-
-```bash
-rm -r nombre_carpeta
-```
-
-### Limpiar la terminal
-
-```bash
-clear
-```
-
-### Ejecutar comandos con permisos de administrador
-
-```bash
-sudo comando
-```
-
-Ejemplo:
-
-```bash
-sudo apt update
-```
+| Competencia | Contenido Temático | Indicador de Logro |
+|---|---|---|
+| El estudiante desarrolla competencias para diseñar, implementar y desplegar aplicaciones web integrando frontend, backend y bases de datos, aplicando autenticación, control de acceso, consumo de servicios API, control de versiones y herramientas de contenerización para el despliegue de soluciones funcionales en entornos Linux o WSL. | Arquitectura de aplicaciones web · Frontend y backend · Bases de datos relacionales · Diseño e implementación de API REST · Autenticación y autorización con JWT · Roles y permisos de usuario · Reglas de negocio · Control de versiones con Git y GitHub · Trabajo colaborativo mediante ramas · Contenerización con Docker · Orquestación de servicios con Docker Compose · Variables de entorno (`.env`) · Despliegue de aplicaciones en Linux o WSL · Documentación técnica y manuales de usuario mediante README.md | El estudiante desarrolla y despliega una aplicación web funcional integrando frontend, backend y base de datos, aplicando autenticación con JWT, reglas de negocio, control de versiones y despliegue mediante contenedores Docker en entornos Linux o WSL, documentando adecuadamente el proceso de desarrollo, operación y uso del sistema. |
 
 ---
 
-## 2. Acceso al servidor por SSH
+## 1. Fundamento Teórico
 
-Para trabajar en un servidor Linux remoto se usa SSH.
+El desarrollo de aplicaciones web modernas se basa en la integración de diferentes componentes que trabajan de forma coordinada para ofrecer una solución funcional al usuario. En este laboratorio se implementa una arquitectura compuesta por **frontend**, **backend** y **base de datos**, desplegada mediante contenedores.
 
-La estructura general del comando es:
-
-```bash
-ssh usuario@ip_del_servidor
-```
-
-Ejemplo:
-
-```bash
-ssh usuario@192.168.1.50
-```
-
-Si el servidor usa un puerto diferente al 22:
-
-```bash
-ssh usuario@ip_del_servidor -p puerto
-```
-
-Ejemplo:
-
-```bash
-ssh usuario@192.168.1.50 -p 2222
-```
-
-Después de ingresar al servidor, se recomienda verificar:
-
-```bash
-pwd
-```
-
-```bash
-ls -la
-```
-
-También es buena práctica actualizar la lista de paquetes:
-
-```bash
-sudo apt update
-```
+- **Frontend:** interfaz gráfica con la que interactúa el usuario. Permite iniciar sesión, consultar espacios, crear reservas y revisar el estado de solicitudes.
+- **Backend:** componente encargado de procesar solicitudes, aplicar reglas de negocio, validar información y gestionar la comunicación con la base de datos. Expone una API REST.
+- **Base de datos:** almacena y organiza de manera persistente usuarios, espacios institucionales y reservas, garantizando consistencia e integridad.
+- **REST API:** la comunicación entre frontend y backend se realiza mediante métodos HTTP (GET, POST, PUT, DELETE).
+- **JWT (JSON Web Token):** mecanismo de autenticación que valida la identidad del usuario y restringe funcionalidades según el rol asignado.
+- **Git / GitHub:** gestión del trabajo colaborativo y control de versiones mediante ramas.
+- **Docker y Docker Compose:** herramientas DevOps para contenerizar los componentes del sistema, garantizando ejecución consistente en entornos Linux o Windows con WSL.
 
 ---
 
-## 3. Preparar una carpeta de trabajo
+## 2. Objetivos
 
-Crear una carpeta para la práctica:
+### Objetivo General
 
-```bash
-mkdir -p ~/clase-despliegue
-```
+Desarrollar y desplegar una aplicación web para la gestión de reservas de espacios institucionales, integrando frontend, backend y base de datos, mediante el uso de contenedores Docker en entornos Linux o Windows con WSL.
 
-Entrar a la carpeta:
+### Objetivos Específicos
 
-```bash
-cd ~/clase-despliegue
-```
-
-Verificar ubicación:
-
-```bash
-pwd
-```
+- Diseñar la arquitectura de una aplicación web compuesta por frontend, backend y base de datos.
+- Implementar servicios web para la gestión de usuarios, espacios y reservas aplicando reglas de negocio y autenticación mediante JWT.
+- Desarrollar una interfaz gráfica que permita la interacción entre usuarios y administradores con el sistema.
+- Gestionar el trabajo colaborativo mediante control de versiones utilizando Git y GitHub.
+- Desplegar la aplicación utilizando Docker y Docker Compose en un entorno Linux o WSL.
+- Documentar el desarrollo, despliegue y uso del sistema mediante archivos `README.md`.
 
 ---
 
-## 4. Instalación de Docker en Ubuntu Server
+## 3. Recursos Requeridos
 
-Primero se actualiza el sistema de paquetes:
+### Equipos
 
-```bash
-sudo apt update
-```
+- Computador personal o estación de trabajo por estudiante.
 
-Instalar paquetes necesarios para usar repositorios por HTTPS:
+### Herramientas de Software
 
-```bash
-sudo apt install -y ca-certificates curl gnupg
-```
+| Herramienta | Descripción |
+|---|---|
+| Sistema operativo | Linux o Windows (con WSL) |
+| Python | 3.10 o superior |
+| FastAPI | Framework backend |
+| PostgreSQL | Base de datos relacional |
+| SQLAlchemy | ORM para Python |
+| Uvicorn | Servidor ASGI |
+| Docker | Contenerización |
+| Git | Control de versiones |
+| GitHub | Repositorio remoto y colaboración |
+| Visual Studio Code | Editor de código recomendado |
+| `python-jose[cryptography]` | Manejo de JWT |
+| `passlib[bcrypt]` | Hash de contraseñas |
+| `python-multipart` | Soporte para formularios |
+| `python-dotenv` | Gestión de variables de entorno |
 
-Crear la carpeta para las llaves de paquetes:
+### Material Bibliográfico
 
-```bash
-sudo install -m 0755 -d /etc/apt/keyrings
-```
-
-Descargar la llave oficial de Docker:
-
-```bash
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-```
-
-Asignar permisos de lectura:
-
-```bash
-sudo chmod a+r /etc/apt/keyrings/docker.gpg
-```
-
-Agregar el repositorio de Docker:
-
-```bash
-echo \
-  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-  $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
-  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-```
-
-Actualizar nuevamente los paquetes:
-
-```bash
-sudo apt update
-```
-
-Instalar Docker Engine, CLI, containerd y Docker Compose como plugin:
-
-```bash
-sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-```
-
-Verificar Docker:
-
-```bash
-docker --version
-```
-
-Verificar Docker Compose:
-
-```bash
-docker compose version
-```
-
-Probar Docker con un contenedor de prueba:
-
-```bash
-sudo docker run hello-world
-```
+- 📁 Repositorio de clase: https://github.com/Juanmorales177809/apps_services.git
 
 ---
 
-## 5. Usar Docker sin escribir sudo
+## 4. Aspectos de Seguridad
 
-Agregar el usuario actual al grupo `docker`:
+Esta práctica corresponde a una actividad de desarrollo de software; no se identifican riesgos físicos o químicos. Se recomienda:
 
-```bash
-sudo usermod -aG docker $USER
-```
-
-Aplicar el cambio de grupo en la sesión actual:
-
-```bash
-newgrp docker
-```
-
-Probar nuevamente:
-
-```bash
-docker run hello-world
-```
+- Mantener una postura adecuada durante el uso prolongado del computador.
+- Evitar la manipulación inadecuada de cables o conexiones eléctricas.
+- Realizar copias de seguridad periódicas del código para evitar pérdida de información.
 
 ---
 
-## 6. Crear la estructura del proyecto
+## 5. Procedimiento y Metodología
 
-Desde la carpeta de trabajo:
-
-```bash
-cd ~/clase-despliegue
-```
-
-Crear la estructura:
-
-```bash
-mkdir -p backend/app
-```
-
-Verificar:
-
-```bash
-ls -la
-```
-
-La estructura esperada será:
-
-```text
-clase-despliegue/
-├── backend/
-│   ├── app/
-│   │   └── main.py
-│   ├── requirements.txt
-│   └── Dockerfile
-├── docker-compose.yml
-├── .env.example
-├── .gitignore
-└── README.md
-```
+La práctica se desarrollará en **equipos de 2 a 3 estudiantes**.
 
 ---
 
-## 7. Crear la aplicación FastAPI
+### Actividad 1 — Configuración del Repositorio
 
-Crear el archivo principal:
+Cada equipo debe crear un repositorio en GitHub con tres ramas:
 
-```bash
-nano backend/app/main.py
-```
+#### Rama `dev` — Desarrollo
+Debe contener:
+- Frontend
+- Backend (modelos, endpoints, validaciones, reglas de negocio)
+- `README.md` de desarrollo
 
-Pegar el siguiente contenido:
+#### Rama `ops` — Despliegue
+Debe contener:
+- `Dockerfile` del frontend
+- `Dockerfile` del backend
+- `docker-compose.yml`
+- `.env.example`
+- Configuración de base de datos
+- `README.md` de despliegue
 
-```python
-from fastapi import FastAPI
-import os
-
-app = FastAPI(
-    title="API desplegada con Docker Compose",
-    version="1.0.0"
-)
-
-@app.get("/")
-def inicio():
-    return {
-        "mensaje": "API funcionando correctamente",
-        "servicio": "FastAPI",
-        "estado": "activo"
-    }
-
-@app.get("/health")
-def health_check():
-    return {
-        "status": "ok"
-    }
-
-@app.get("/config")
-def mostrar_configuracion():
-    return {
-        "database_url": os.getenv("DATABASE_URL", "No configurada")
-    }
-```
-
-Guardar el archivo con:
-
-```text
-CTRL + O
-Enter
-CTRL + X
-```
+#### Rama `main` — Versión Final
+- Contiene la integración de `dev` y `ops`.
+- El `README.md` de `main` será el informe final del proyecto.
 
 ---
 
-## 8. Crear el archivo requirements.txt
+### Actividad 2 — Comprensión del Problema, Requisitos y Reglas de Negocio
 
-Crear el archivo:
+#### Descripción del Problema
 
-```bash
-nano backend/requirements.txt
-```
+Una institución requiere una aplicación web para administrar la reserva de espacios como salas de reuniones, laboratorios, auditorios o aulas especiales. El sistema debe evitar conflictos por horarios cruzados, reservas fuera del horario permitido o solicitudes con poca anticipación.
 
-Agregar:
+#### Requisitos Funcionales
 
-```text
-fastapi
-uvicorn[standard]
-sqlalchemy
-psycopg2-binary
-python-dotenv
-```
+| ID | Requisito |
+|----|-----------|
+| A | Inicio de sesión con autenticación JWT |
+| B | Control de acceso según rol: `admin` o `usuario` |
+| C | Registrar usuarios |
+| D | Consultar usuarios registrados |
+| E | Registrar espacios institucionales |
+| F | Consultar espacios disponibles |
+| G | Crear reservas |
+| H | Consultar reservas realizadas |
+| I | Actualizar el estado de una reserva |
+| J | Cancelar una reserva |
+| K | Validar disponibilidad antes de crear una reserva |
+| L | Mostrar mensajes de error cuando una reserva no cumpla las reglas de negocio |
 
-Guardar y salir.
+#### Modelo Básico de Datos
 
----
+**Tabla `usuarios`**
 
-## 9. Crear el Dockerfile para FastAPI
+| Campo | Tipo |
+|---|---|
+| id_usuario | PK |
+| nombre | texto |
+| correo | texto |
+| rol | texto (`admin` / `usuario`) |
 
-Crear el archivo:
+**Tabla `espacios`**
 
-```bash
-nano backend/Dockerfile
-```
+| Campo | Tipo |
+|---|---|
+| id_espacio | PK |
+| nombre | texto |
+| ubicacion | texto |
+| capacidad | entero |
+| estado | texto |
 
-Agregar el siguiente contenido:
+**Tabla `reservas`**
 
-```dockerfile
-FROM python:3.12-slim
+| Campo | Tipo |
+|---|---|
+| id_reserva | PK |
+| id_usuario | FK → usuarios |
+| id_espacio | FK → espacios |
+| fecha | fecha |
+| hora_inicio | hora |
+| hora_fin | hora |
+| cantidad_asistentes | entero |
+| estado | texto |
 
-WORKDIR /app
+#### Reglas de Negocio
 
-COPY requirements.txt .
-
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY . .
-
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-```
-
-Guardar y salir.
-
-### Explicación del Dockerfile
-
-`FROM python:3.12-slim` define la imagen base.
-
-`WORKDIR /app` define la carpeta de trabajo dentro del contenedor.
-
-`COPY requirements.txt .` copia el archivo de dependencias.
-
-`RUN pip install --no-cache-dir -r requirements.txt` instala las dependencias.
-
-`COPY . .` copia el código del backend dentro del contenedor.
-
-`CMD [...]` ejecuta la API usando Uvicorn.
-
-El parámetro `--host 0.0.0.0` permite que la API sea accesible desde fuera del contenedor.
-
----
-
-## 10. Crear el archivo docker-compose.yml
-
-Crear el archivo en la raíz del proyecto:
-
-```bash
-nano docker-compose.yml
-```
-
-Agregar el siguiente contenido:
-
-```yaml
-services:
-  db:
-    image: postgres:16
-    container_name: clase_postgres
-    restart: always
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: appdb
-    ports:
-      - "5433:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - app_network
-
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: clase_fastapi
-    restart: always
-    depends_on:
-      - db
-    environment:
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/appdb
-    ports:
-      - "8000:8000"
-    networks:
-      - app_network
-
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: clase_pgadmin
-    restart: always
-    depends_on:
-      - db
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: admin
-    ports:
-      - "5050:80"
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-    networks:
-      - app_network
-
-volumes:
-  postgres_data:
-  pgadmin_data:
-
-networks:
-  app_network:
-    driver: bridge
-```
-
-Guardar y salir.
+| ID | Regla |
+|----|-------|
+| A | Solo un usuario autenticado puede crear reservas |
+| B | Solo un usuario `admin` puede aprobar o rechazar reservas |
+| C | **No permitir reservas superpuestas:** no se puede reservar un espacio si ya existe una reserva en el mismo horario y fecha |
+| D | **Mínimo 24 horas de anticipación:** toda reserva debe realizarse con al menos 24 horas de anticipación |
+| E | **Horario permitido:** Lunes–Viernes 7:00 a.m.–8:00 p.m. · Sábados 8:00 a.m.–12:00 m. · Domingos: no se permiten reservas |
+| F | **Hora inicio < hora fin:** el sistema no acepta reservas con hora inicio igual o posterior a hora fin |
+| G | **No reservar espacios inactivos:** estado `inactivo`, `en mantenimiento` o `no disponible` bloquea la reserva |
+| H | **Capacidad máxima:** la cantidad de asistentes no puede superar la capacidad del espacio |
+| I | **Estado inicial `esperando`:** solo un `admin` puede cambiar el estado a `aprobada` o `rechazada`. Las reservas `esperando` y `aprobada` bloquean el horario; las `rechazadas` no |
 
 ---
 
-## 11. Explicación del docker-compose.yml
+### Actividad 3 — Desarrollo del Backend
 
-### Servicio db
+El backend se desarrollará con **FastAPI** siguiendo una arquitectura modular.
 
-`image: postgres:16` crea un contenedor usando PostgreSQL 16.
+#### El backend debe incluir:
+- Conexión a base de datos
+- Modelos o entidades principales
+- Endpoints para usuarios, espacios y reservas
+- Autenticación mediante JWT (roles: `admin` / `usuario`)
+- Autorización por roles
+- Validaciones de reglas de negocio
+- Manejo básico de errores
+- Documentación automática de la API (Swagger)
 
-`container_name: clase_postgres` define un nombre claro para el contenedor.
+#### Estructura sugerida de carpetas
 
-`POSTGRES_USER`, `POSTGRES_PASSWORD` y `POSTGRES_DB` definen el usuario, la contraseña y la base de datos inicial.
-
-```yaml
-ports:
-  - "5433:5432"
+```
+app/
+├── api/
+│   ├── usuarios.py
+│   ├── espacios.py
+│   ├── reservas.py
+│   └── auth.py
+├── models/
+│   ├── usuario.py
+│   ├── espacio.py
+│   └── reserva.py
+├── schemas/
+│   ├── usuario.py
+│   ├── espacio.py
+│   └── reserva.py
+├── crud/
+├── auth/
+├── db.py
+└── main.py
 ```
 
-El puerto interno de PostgreSQL es `5432`. En la máquina se publica como `5433`.
+> ⚠️ El uso de arquitectura estructurada en carpetas es **obligatorio**.
 
-```yaml
-volumes:
-  - postgres_data:/var/lib/postgresql/data
-```
+#### Consideraciones de seguridad
+- Las contraseñas **no deben almacenarse en texto plano**. Usar `passlib`, `bcrypt` o `pwdlib`.
+- Los endpoints deben retornar respuestas estructuradas con mensajes claros de éxito o error.
 
-Guarda los datos de PostgreSQL en un volumen persistente.
-
-### Servicio backend
-
-```yaml
-build:
-  context: ./backend
-  dockerfile: Dockerfile
-```
-
-Construye la imagen del backend usando el Dockerfile ubicado en la carpeta `backend`.
-
-```yaml
-depends_on:
-  - db
-```
-
-Indica que el backend depende del servicio `db`.
-
-```yaml
-DATABASE_URL: postgresql://postgres:postgres@db:5432/appdb
-```
-
-Define la URL de conexión a la base de datos.
-
-El host es `db`, no `localhost`.
-
-Dentro de Docker Compose, los servicios se comunican usando el nombre del servicio. Por eso el backend se conecta a PostgreSQL usando:
-
-```text
-db:5432
-```
-
-### Servicio pgAdmin
-
-`image: dpage/pgadmin4:latest` crea un contenedor con pgAdmin.
-
-```yaml
-ports:
-  - "5050:80"
-```
-
-Permite acceder a pgAdmin desde el navegador usando el puerto `5050`.
-
-```yaml
-volumes:
-  - pgadmin_data:/var/lib/pgadmin
-```
-
-Permite conservar la configuración de pgAdmin.
+**Ejemplos de respuestas esperadas:**
+- Creación exitosa
+- Error de autenticación
+- Reserva rechazada por conflicto de horario
+- Reserva creada en estado `esperando`
 
 ---
 
-## 12. Crear archivo .env.example
+### Actividad 4 — Desarrollo del Frontend
 
-Aunque en esta práctica las variables están dentro del `docker-compose.yml`, es conveniente mostrar cómo se documentan.
+La tecnología de desarrollo del frontend es de **libre elección** del equipo, siempre que permita el consumo correcto de la API.
 
-Crear archivo:
+**Opciones permitidas (ejemplos):**
+- HTML, CSS y JavaScript puro
+- React
+- Vue
+- Angular
+- Templates del backend
+- Otros frameworks o librerías
 
-```bash
-nano .env.example
-```
+#### El frontend debe incluir como mínimo:
+- Pantalla de inicio de sesión
+- Gestión de autenticación con JWT
+- Interfaz diferenciada por rol
 
-Agregar:
+**Usuario:**
+- Consultar espacios
+- Crear reservas
+- Consultar sus reservas
 
-```env
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
-POSTGRES_DB=appdb
-DATABASE_URL=postgresql://postgres:postgres@db:5432/appdb
-PGADMIN_DEFAULT_EMAIL=admin@admin.com
-PGADMIN_DEFAULT_PASSWORD=admin
-```
+**Administrador:**
+- Gestionar espacios
+- Consultar todas las reservas
+- Aprobar o rechazar reservas
 
-Guardar y salir.
-
----
-
-## 13. Crear archivo .gitignore
-
-Crear archivo:
-
-```bash
-nano .gitignore
-```
-
-Agregar:
-
-```gitignore
-.env
-__pycache__/
-*.pyc
-venv/
-.env.local
-.DS_Store
-```
-
-Guardar y salir.
+#### Otras consideraciones:
+- Gestión básica de formularios (validación en cliente)
+- Manejo de mensajes de éxito y error
+- Almacenamiento del token JWT: libre elección (`localStorage`, `sessionStorage`, `cookies`, etc.)
+- El backend es el responsable final de validar reglas de negocio e integridad de datos
 
 ---
 
-## 14. Levantar los servicios
+### Actividad 5 — Despliegue en Contenedores Docker
 
-Desde la raíz del proyecto:
+El sistema completo debe desplegarse en **Linux o WSL** usando Docker y Docker Compose.
 
-```bash
-cd ~/clase-despliegue
-```
+#### El sistema debe levantar al menos:
+- Contenedor del frontend (expuesto en puerto local)
+- Contenedor del backend
+- Contenedor de la base de datos
 
-Levantar todos los servicios:
+#### El archivo `docker-compose.yml` debe incluir:
+- Servicio del frontend
+- Servicio del backend
+- Servicio de base de datos
+- Red entre contenedores
+- Volúmenes para persistencia de datos
+- Variables de entorno necesarias
 
-```bash
-docker compose up -d --build
-```
-
-Explicación:
-
-`docker compose` ejecuta Docker Compose.
-
-`up` levanta los servicios definidos.
-
-`-d` ejecuta los contenedores en segundo plano.
-
-`--build` reconstruye la imagen del backend si hubo cambios en el Dockerfile o en el código.
+> 📌 Consultar el repositorio de clase para ejemplos de configuración.
 
 ---
 
-## 15. Verificar contenedores
+## 6. Parámetros para Elaboración del Informe (README.md)
 
-Ver contenedores activos:
+Cada equipo entregará la documentación mediante archivos `README.md` en las tres ramas del repositorio.
 
-```bash
-docker ps
-```
+### `README.md` — Rama `main` (Manual de usuario e informe final)
 
-Se deberían ver tres contenedores:
+Debe incluir:
+- Nombre de la aplicación, descripción general y objetivo
+- Integrantes del equipo y rol de cada uno
+- Qué hace la aplicación y qué problema resuelve
+- Arquitectura general y tecnologías utilizadas
+- Resumen del despliegue (Docker Compose, Linux/WSL, puertos, referencia a rama `ops`)
+- Tutorial de uso con imágenes (inicio de sesión, creación/consulta/cancelación de reservas, gestión de espacios, mensajes de error, cierre de sesión)
+- Conclusiones, dificultades, aprendizajes y mejoras futuras
 
-```text
-clase_postgres
-clase_fastapi
-clase_pgadmin
-```
+### `README.md` — Rama `dev` (Documentación técnica)
 
-Ver todos los contenedores, incluso detenidos:
+Debe incluir:
+- Arquitectura del frontend y backend
+- Diseño de base de datos y modelo entidad-relación
+- Estructura de carpetas, tecnologías y librerías
+- Endpoints desarrollados
+- Modelo de autenticación JWT y roles implementados
+- Reglas de negocio implementadas y proceso de validación de reservas
+- Instrucciones para ejecutar en modo desarrollo
 
-```bash
-docker ps -a
-```
+### `README.md` — Rama `ops` (Documentación de despliegue)
 
----
+Debe incluir:
+- Requisitos previos (Docker, Docker Compose, WSL si aplica)
+- Clonación del repositorio y configuración de `.env`
+- Explicación de variables de entorno
+- `Dockerfile` del frontend y backend
+- Archivo `docker-compose.yml`
+- Configuración de red y persistencia
+- Puertos utilizados
+- Construcción, ejecución y verificación del sistema
+- Apagado, reinicio y actualización
+- Solución de errores comunes
 
-## 16. Verificar logs
-
-Ver logs generales del proyecto:
-
-```bash
-docker compose logs
-```
-
-Ver logs del backend:
-
-```bash
-docker compose logs backend
-```
-
-Ver logs de PostgreSQL:
-
-```bash
-docker compose logs db
-```
-
-Ver logs de pgAdmin:
-
-```bash
-docker compose logs pgadmin
-```
-
-Seguir los logs en tiempo real:
-
-```bash
-docker compose logs -f
-```
-
-O solo los logs del backend en tiempo real:
-
-```bash
-docker compose logs -f backend
-```
+> 📝 El README debe permitir que cualquier persona pueda ejecutar el proyecto **sin necesidad de información adicional**.
 
 ---
 
-## 17. Probar la API FastAPI
+## 7. Entregables y Resultados Esperados
 
-En el navegador:
+### A. Repositorio del Proyecto
+- Repositorio en GitHub con ramas `main`, `dev`, `ops`
+- Código fuente del frontend y backend
+- Configuración de base de datos, Dockerfiles y `docker-compose.yml`
+- **Cada integrante debe tener commits verificables en el historial**
 
-```text
-http://IP_DEL_SERVIDOR:8000
-```
+### B. Documentación del Proyecto
+- `README.md` en `main` — manual de usuario e informe final
+- `README.md` en `dev` — documentación técnica
+- `README.md` en `ops` — documentación de despliegue
 
-Si se está trabajando en la misma máquina:
+### C. Despliegue Funcional
+El sistema debe demostrar:
+- Frontend accesible desde el navegador
+- Backend funcionando correctamente
+- Base de datos operativa
+- Comunicación entre contenedores
+- Autenticación JWT funcional
+- Reglas de negocio operativas
 
-```text
-http://localhost:8000
-```
+### D. Sustentación del Proyecto
+- Programada mediante cita con el docente
+- Verifica: funcionamiento del sistema, comprensión técnica, participación individual, arquitectura y proceso de despliegue
 
-Documentación Swagger:
-
-```text
-http://IP_DEL_SERVIDOR:8000/docs
-```
-
-Endpoint de verificación:
-
-```text
-http://IP_DEL_SERVIDOR:8000/health
-```
-
-Endpoint de configuración:
-
-```text
-http://IP_DEL_SERVIDOR:8000/config
-```
+> ⚠️ **Importante:** únicamente los proyectos sustentados podrán ser considerados para calificación.
 
 ---
 
-## 18. Probar pgAdmin
+## 8. Criterios de Evaluación
 
-Abrir en el navegador:
+| Criterio | Descripción | Porcentaje |
+|---|---|:---:|
+| **Desarrollo (Dev)** | Implementación del frontend, backend, base de datos, autenticación JWT, roles, validaciones y reglas de negocio | 20% |
+| **Despliegue (Ops)** | Dockerfiles, Docker Compose, despliegue funcional en Linux/WSL, conectividad entre servicios y ejecución correcta | 10% |
+| **Documentación** | Calidad y completitud de los README.md (main, dev, ops), claridad técnica, manual de usuario y reproducibilidad | 20% |
+| **Sustentación** | Funcionamiento en vivo, dominio técnico, explicación de arquitectura, despliegue y participación de los integrantes | 50% |
 
-```text
-http://IP_DEL_SERVIDOR:5050
-```
-
-Si se está trabajando en la misma máquina:
-
-```text
-http://localhost:5050
-```
-
-Ingresar con los datos definidos en el `docker-compose.yml`:
-
-```text
-Email: admin@admin.com
-Password: admin
-```
+**Consideraciones:**
+- El sistema debe encontrarse **funcional** al momento de la sustentación.
+- Se verificará la participación individual mediante el historial de commits.
+- La documentación debe permitir reproducir el sistema siguiendo los README.md.
 
 ---
 
-## 19. Registrar PostgreSQL en pgAdmin
+## 9. Bibliografía
 
-Dentro de pgAdmin, crear un nuevo servidor.
-
-### General
-
-```text
-Name: clase_postgres
-```
-
-### Connection
-
-```text
-Host name/address: db
-Port: 5432
-Maintenance database: appdb
-Username: postgres
-Password: postgres
-```
-
-El host debe ser:
-
-```text
-db
-```
-
-No se usa `localhost` porque pgAdmin está dentro de otro contenedor. En la red de Docker Compose, PostgreSQL se encuentra usando el nombre del servicio `db`.
+1. Docker, Inc. (2024). *Docker documentation*. https://docs.docker.com
+2. Docker, Inc. (2024). *Docker Compose overview*. https://docs.docker.com/compose
+3. Bayer, M. (2024). *SQLAlchemy documentation (version 2.0)*. SQLAlchemy Project. https://docs.sqlalchemy.org
+4. Jones, M., Bradley, J., & Sakimura, N. (2015). *JSON Web Token (JWT)* (RFC 7519). Internet Engineering Task Force (IETF). https://doi.org/10.17487/RFC7519
+5. Hardt, D. (Ed.). (2012). *The OAuth 2.0 authorization framework* (RFC 6749). Internet Engineering Task Force (IETF). https://doi.org/10.17487/RFC6749
+6. FastAPI. (2024). *FastAPI documentation*. https://fastapi.tiangolo.com
+7. Pydantic. (2024). *Pydantic documentation*. https://docs.pydantic.dev
+8. Python Software Foundation. (2024). *Python documentation*. https://docs.python.org
+9. Chacon, S., & Straub, B. (2014). *Pro Git*. Apress.
+10. Fielding, R. (2000). *Architectural styles and the design of network-based software architectures*. University of California, Irvine.
 
 ---
 
-## 20. Verificar puertos publicados
-
-Ver los contenedores y sus puertos:
-
-```bash
-docker ps
-```
-
-También se puede usar:
-
-```bash
-docker compose ps
-```
-
-Los puertos esperados son:
-
-```text
-FastAPI: 8000:8000
-PostgreSQL: 5433:5432
-pgAdmin: 5050:80
-```
-
-Interpretación:
-
-`8000:8000` significa puerto externo 8000 y puerto interno 8000.
-
-`5433:5432` significa puerto externo 5433 y puerto interno 5432.
-
-`5050:80` significa puerto externo 5050 y puerto interno 80.
-
----
-
-## 21. Entrar a un contenedor
-
-Entrar al contenedor del backend:
-
-```bash
-docker exec -it clase_fastapi bash
-```
-
-Salir del contenedor:
-
-```bash
-exit
-```
-
-Entrar al contenedor de PostgreSQL:
-
-```bash
-docker exec -it clase_postgres bash
-```
-
-Entrar a PostgreSQL desde el contenedor:
-
-```bash
-psql -U postgres -d appdb
-```
-
-Listar bases de datos:
-
-```sql
-\l
-```
-
-Listar tablas:
-
-```sql
-\dt
-```
-
-Salir de PostgreSQL:
-
-```sql
-\q
-```
-
-Salir del contenedor:
-
-```bash
-exit
-```
-
----
-
-## 22. Reiniciar servicios
-
-Reiniciar todos los servicios:
-
-```bash
-docker compose restart
-```
-
-Reiniciar solo el backend:
-
-```bash
-docker compose restart backend
-```
-
----
-
-## 23. Apagar los servicios
-
-Detener los servicios sin eliminar volúmenes:
-
-```bash
-docker compose down
-```
-
-Esto elimina los contenedores, pero conserva los datos de PostgreSQL y pgAdmin en los volúmenes.
-
----
-
-## 24. Apagar y borrar datos persistentes
-
-```bash
-docker compose down -v
-```
-
-El parámetro `-v` elimina también los volúmenes.
-
-Al usar este comando, se eliminan los datos guardados en PostgreSQL y la configuración de pgAdmin.
-
----
-
-## 25. Reconstruir después de cambios
-
-Si se modifica el código del backend o el Dockerfile:
-
-```bash
-docker compose up -d --build
-```
-
-Si el problema persiste, se puede bajar todo y volver a levantar:
-
-```bash
-docker compose down
-docker compose up -d --build
-```
-
----
-
-## 26. Errores frecuentes
-
-### Error: el backend no conecta con PostgreSQL
-
-Revisar la variable:
-
-```text
-DATABASE_URL=postgresql://postgres:postgres@db:5432/appdb
-```
-
-El host debe ser:
-
-```text
-db
-```
-
-No debe ser:
-
-```text
-localhost
-```
-
-Dentro de un contenedor, `localhost` apunta al mismo contenedor, no a otro servicio.
-
-### Error: el puerto ya está ocupado
-
-Ejemplo:
-
-```text
-Bind for 0.0.0.0:8000 failed: port is already allocated
-```
-
-Solución: cambiar el puerto externo.
-
-Ejemplo:
-
-```yaml
-ports:
-  - "8001:8000"
-```
-
-Luego la API se consulta por:
-
-```text
-http://IP_DEL_SERVIDOR:8001
-```
-
-### Error: el contenedor se detiene
-
-Revisar logs:
-
-```bash
-docker compose logs backend
-```
-
-O:
-
-```bash
-docker compose logs db
-```
-
-### Error: pgAdmin no conecta con PostgreSQL
-
-Revisar que en pgAdmin se use:
-
-```text
-Host name/address: db
-Port: 5432
-```
-
----
-
-## 27. Comandos principales de Docker para la práctica
-
-Ver versión de Docker:
-
-```bash
-docker --version
-```
-
-Ver versión de Docker Compose:
-
-```bash
-docker compose version
-```
-
-Levantar servicios:
-
-```bash
-docker compose up -d --build
-```
-
-Ver contenedores activos:
-
-```bash
-docker ps
-```
-
-Ver servicios del Compose:
-
-```bash
-docker compose ps
-```
-
-Ver logs:
-
-```bash
-docker compose logs
-```
-
-Ver logs en tiempo real:
-
-```bash
-docker compose logs -f
-```
-
-Reiniciar servicios:
-
-```bash
-docker compose restart
-```
-
-Apagar servicios:
-
-```bash
-docker compose down
-```
-
-Apagar y borrar volúmenes:
-
-```bash
-docker compose down -v
-```
-
-Eliminar imágenes sin uso:
-
-```bash
-docker image prune
-```
-
-Eliminar contenedores detenidos:
-
-```bash
-docker container prune
-```
-
-Ver redes:
-
-```bash
-docker network ls
-```
-
-Ver volúmenes:
-
-```bash
-docker volume ls
-```
-
----
-
-## 28. Preparar el repositorio en GitHub
-
-Inicializar Git:
-
-```bash
-git init
-```
-
-Agregar archivos:
-
-```bash
-git add .
-```
-
-Crear commit:
-
-```bash
-git commit -m "Despliegue inicial con FastAPI PostgreSQL y pgAdmin"
-```
-
-Configurar rama principal:
-
-```bash
-git branch -M main
-```
-
-Agregar repositorio remoto:
-
-```bash
-git remote add origin URL_DEL_REPOSITORIO
-```
-
-Subir al repositorio:
-
-```bash
-git push -u origin main
-```
-
----
-
-## 29. Flujo completo de la práctica
-
-La práctica completa puede resumirse así:
-
-```text
-1. Entrar al servidor por SSH.
-2. Repasar comandos básicos de Linux.
-3. Instalar Docker y Docker Compose.
-4. Crear la estructura del proyecto.
-5. Crear main.py de FastAPI.
-6. Crear requirements.txt.
-7. Crear Dockerfile del backend.
-8. Crear docker-compose.yml.
-9. Levantar servicios con docker compose up -d --build.
-10. Verificar contenedores con docker ps.
-11. Revisar logs con docker compose logs.
-12. Probar FastAPI en el navegador.
-13. Probar pgAdmin.
-14. Registrar PostgreSQL en pgAdmin usando el host db.
-15. Subir el proyecto a GitHub.
-```
-
----
-
-## 30. Resultado esperado
-
-Al finalizar, el proyecto debe tener tres servicios funcionando:
-
-```text
-FastAPI      http://IP_DEL_SERVIDOR:8000
-Swagger      http://IP_DEL_SERVIDOR:8000/docs
-pgAdmin      http://IP_DEL_SERVIDOR:5050
-PostgreSQL   db:5432 dentro de Docker
-PostgreSQL   IP_DEL_SERVIDOR:5433 desde fuera del contenedor
-```
-
-La estructura final del proyecto debe quedar así:
-
-```text
-clase-despliegue/
-├── backend/
-│   ├── app/
-│   │   └── main.py
-│   ├── requirements.txt
-│   └── Dockerfile
-├── docker-compose.yml
-├── .env.example
-├── .gitignore
-└── README.md
-```
-
-El punto clave de la clase es entender que Docker Compose permite levantar varios servicios conectados con una sola configuración. La API, la base de datos y pgAdmin no son elementos aislados: forman parte de una misma arquitectura desplegada.
+*Guía FGL-029 · Versión 001 · 19-05-2026 · Elaborada por Juan Carlos Morales Guerra*
