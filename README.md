@@ -1,4 +1,4 @@
-# 🧪 Laboratorio 4 — Laboratorio Integrador de Aplicaciones y Servicios Web
+#Laboratorio 4 — Laboratorio Integrador de Aplicaciones y Servicios Web
 
 > **Asignatura:** Aplicaciones y Servicios Web  
 > **Programa:** Tecnología en Desarrollo de Software  
