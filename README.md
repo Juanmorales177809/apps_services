@@ -1,4 +1,4 @@
-# Deployt
+# Deploy
 
 Este documento acompaña la práctica final de la clase de Aplicaciones y Servicios Web. El objetivo es desplegar una API desarrollada con FastAPI, una base de datos PostgreSQL y pgAdmin usando Docker Compose en un servidor Linux.
 
